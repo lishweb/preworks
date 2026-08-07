@@ -111,6 +111,43 @@ add_filter( 'document_title_parts', function( $parts ) {
     return $parts;
 } );
 
+// ===== 広告用LP（lp001=Google検索広告 / lp002=Google P-MAX広告） =====
+// LP判定
+function preworks_is_lp() {
+    return is_page( array( 'lp001', 'lp002' ) );
+}
+
+// LINEボタンの遷移先URL。広告用LPでは計測用LIFF URLを、それ以外は従来URLを返す
+function preworks_line_url() {
+    $map = array(
+        'lp001' => 'https://liff.line.me/2008701289-ICL3J7sI/track?trackingId=7f9a24e4-c8b4-4c2a-a979-4a20a0742fef&line-ad-track=true&liffId=2008701289-ICL3J7sI&follow=%40034mfpdk',
+        'lp002' => 'https://liff.line.me/2008701289-ICL3J7sI/track?trackingId=146fdd6d-acd4-401e-82d9-309ea95db53b&line-ad-track=true&liffId=2008701289-ICL3J7sI&follow=%40034mfpdk',
+    );
+    if ( preworks_is_lp() ) {
+        $slug = get_post_field( 'post_name', get_queried_object_id() );
+        if ( isset( $map[ $slug ] ) ) {
+            return $map[ $slug ];
+        }
+    }
+    return 'https://sub.online-assistant.biz/line/open/2sRcbvLGNaq8?mtid=BxzwhkkjSRAt';
+}
+
+// 広告計測スクリプト（LP限定・body開始直後。header.php の wp_body_open() から出力）
+function preworks_lp_tracking_script() {
+    if ( preworks_is_lp() ) {
+        echo '<script async src="https://l-cv-tracking-client.vercel.app/line-ad/v1/append-ad-params.js"></script>' . "\n";
+    }
+}
+add_action( 'wp_body_open', 'preworks_lp_tracking_script' );
+
+// 広告用LPはTOPの複製（重複コンテンツ）のためインデックスさせない
+function preworks_lp_noindex() {
+    if ( preworks_is_lp() ) {
+        echo '<meta name="robots" content="noindex,nofollow">' . "\n";
+    }
+}
+add_action( 'wp_head', 'preworks_lp_noindex', 0 );
+
 // OGP / Twitterカード（SEOプラグイン未導入時のフォールバック。SEO SIMPLE PACK 等でOGP出力するなら本関数を削除）
 function preworks_ogp() {
     if ( is_admin() || is_feed() ) return;
