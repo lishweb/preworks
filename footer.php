@@ -15,7 +15,7 @@
           <li><a href="<?php echo $preworks_nav_base; ?>#voice">修了生の声</a></li>
           <li><a href="<?php echo $preworks_nav_base; ?>#mentor">メンター紹介</a></li>
           <li><a href="<?php echo home_url('/faq/'); ?>">よくある質問</a></li>
-          <li><a href="<?php echo $preworks_nav_base; ?>#contact">お問い合わせ</a></li>
+          <li><a href="<?php echo home_url('/contact/'); ?>">お問い合わせ</a></li>
         </ul>
       </div>
       <div>
