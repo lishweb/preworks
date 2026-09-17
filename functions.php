@@ -18,12 +18,12 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.11' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.12' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
     // メインJS
-    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.11', true );
+    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.12', true );
 }
 add_action( 'wp_enqueue_scripts', 'preworks_assets' );
 
@@ -92,6 +92,416 @@ function preworks_register_news() {
     ) );
 }
 add_action( 'init', 'preworks_register_news' );
+
+/* =========================================================================
+ * 修了生の声（voice） v1.0.12
+ * ------------------------------------------------------------------------
+ * テスト環境 1.3.50 から移植。坂さん依頼「本番のWordPressにも修了生の声の実装」
+ *
+ * 移植したもの
+ *   ・カスタム投稿タイプ voice（rewrite slug=voice / with_front=false）
+ *   ・かんたん入力メタボックス（本文やHTMLを書かずに項目を埋めるだけ）
+ *   ・アイコン選択（メディアライブラリ）
+ *   ・Q&A吹き出しのレンダラー（話者プレフィックス方式・同一話者の自動結合）
+ *   ・入稿用ショートコード [vvideo][vprofile][vq][vyou][vcs]
+ *
+ * テンプレート： single-voice.php / archive-voice.php
+ * トップページ： front-page.php の「⑨ 参加者の声」を voice 連動に変更
+ *                （0件のあいだは従来の固定3枚を表示するフォールバック付き）
+ * ========================================================================= */
+
+// ===== 修了生の声(カスタム投稿タイプ) 投稿・固定ページと別管理・左メニュー独立 =====
+function preworks_register_voice() {
+    register_post_type( 'voice', array(
+        'labels' => array(
+            'name' => '修了生の声', 'singular_name' => '修了生の声',
+            'add_new' => '新規追加', 'add_new_item' => '修了生の声を追加',
+            'edit_item' => '修了生の声を編集', 'all_items' => '修了生の声一覧',
+            'menu_name' => '修了生の声', 'view_item' => '修了生の声を表示',
+        ),
+        'public' => true,
+        'has_archive' => true,
+        'menu_icon' => 'dashicons-format-quote',
+        'menu_position' => 6,
+        'rewrite' => array( 'slug' => 'voice', 'with_front' => false ),
+        'supports' => array( 'title', 'thumbnail' ),
+        'show_in_rest' => false,
+    ) );
+}
+add_action( 'init', 'preworks_register_voice' );
+
+/*
+ * voice を追加したので、リライトルールを一度だけ再生成する。
+ * ⚠️ テーマを「有効化」せずファイルだけ差し替える運用では after_switch_theme が
+ *    走らないため、これが無いと /voice/ と /voice/○○/ が 404 になる
+ *    （通常は「設定 → パーマリンク → 変更を保存」で直すが、忘れると坂さんに
+ *      壊れたリンクが見える。ここで自動化しておく）。
+ * soft flush（第2引数 false）なので .htaccess は書き換えない。
+ * 一度実行したらフラグを立て、以後は走らない。
+ */
+function preworks_flush_rewrite_1012() {
+    if ( get_option( 'preworks_rewrite_rev' ) === '1012' ) return;
+    flush_rewrite_rules( false );
+    update_option( 'preworks_rewrite_rev', '1012' );
+}
+add_action( 'admin_init', 'preworks_flush_rewrite_1012' );
+
+/*
+ * 修了生の声のスラッグ検査（v1.0.12）
+ * 日本語スラッグ（/voice/大城さん/）は共有時に %E5%A4%A7%E5%9F%8E… に変換され、
+ * SNSやメールで扱いづらい。公開前に英字へ直してもらうための警告。
+ * 公開は止めない（入稿を妨げない）。
+ *
+ * ・ブロックエディタでは admin_notices の表示位置が安定しないため、
+ *   かんたん入力メタボックスの中にも同じ警告を出す（preworks_slug_warning_box）。
+ * ・/voice/○○/ は第2階層なので、固定ページとのスラッグ衝突は起きない。
+ *   よって衝突チェックは行わない（投稿を本番に載せる段階で別途必要になる）。
+ */
+function preworks_slug_warnings( $post_id ) {
+    $warn = array();
+    $post = get_post( $post_id );
+    if ( ! $post || 'voice' !== $post->post_type || 'auto-draft' === $post->post_status ) return $warn;
+    $slug = urldecode( (string) $post->post_name );
+    if ( '' === $slug ) return $warn;
+    if ( ! preg_match( '/^[a-z0-9\-]+$/', $slug ) ) {
+        $warn[] = '<strong>ページURL（スラッグ）をご確認ください。</strong><br>'
+                . '現在のスラッグ：<code>' . esc_html( $slug ) . '</code><br>'
+                . '日本語のURLは共有時に長い記号列（%E3%82…）に変換され、SNSやメールで扱いづらくなります。'
+                . '<strong>英小文字・数字・ハイフン（-）</strong>だけで設定してください。'
+                . '例：<code>oshiro-san</code><br>'
+                . '右パネルの「URL」欄（クラシック画面ではタイトル下の「パーマリンク」）から変更できます。'
+                . '<strong>公開後の変更はSNS等の共有リンクが開けなくなるため、公開前に確定してください。</strong>';
+    }
+    return $warn;
+}
+
+function preworks_slug_admin_notice() {
+    if ( ! function_exists( 'get_current_screen' ) ) return;
+    $screen = get_current_screen();
+    if ( ! $screen || 'post' !== $screen->base || 'voice' !== $screen->post_type ) return;
+    global $post;
+    if ( ! $post ) return;
+    foreach ( preworks_slug_warnings( $post->ID ) as $w ) {
+        echo '<div class="notice notice-error"><p>' . $w . '</p></div>';
+    }
+}
+add_action( 'admin_notices', 'preworks_slug_admin_notice' );
+
+// メタボックス内に出す警告（レイアウトに関係なく必ず見える場所）
+function preworks_slug_warning_box( $post_id ) {
+    $warn = preworks_slug_warnings( $post_id );
+    if ( ! $warn ) return '';
+    $html = '<div style="background:#fcf0f1;border:1px solid #d63638;border-left-width:4px;padding:12px 14px;border-radius:4px;font-size:13px;line-height:1.8;margin:0 0 14px;">';
+    foreach ( $warn as $i => $w ) {
+        $html .= ( $i ? '<hr style="border:0;border-top:1px solid #f0c8c9;margin:10px 0;">' : '' )
+               . '<span style="color:#d63638;font-weight:700;">⚠️ </span>' . $w;
+    }
+    return $html . '</div>';
+}
+
+
+
+// ===== 修了生の声 かんたん入力欄(全項目ラベル付き・本文やHTML不要) =====
+function preworks_voice_metabox() {
+    add_meta_box( 'preworks_voice_fields', '修了生の声（かんたん入力）', 'preworks_voice_metabox_html', 'voice', 'normal', 'high' );
+}
+add_action( 'add_meta_boxes', 'preworks_voice_metabox' );
+// ===== かんたん入力欄：アイコン選択（メディアライブラリ）=====
+function preworks_admin_media_enqueue( $hook ) {
+    $screen = get_current_screen();
+    if ( $screen && in_array( $screen->post_type, array( 'voice' ), true ) ) {
+        wp_enqueue_media();
+    }
+}
+add_action( 'admin_enqueue_scripts', 'preworks_admin_media_enqueue' );
+
+function preworks_media_picker_assets() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+    ?>
+<style>
+.pw-media{display:flex;align-items:center;gap:10px;margin:2px 0 0;}
+.pw-media .pw-media-prev{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid #ddd;background:#fafafa;}
+.pw-media .pw-media-none{width:56px;height:56px;border-radius:50%;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:11px;}
+</style>
+<script>
+jQuery(function($){
+  $(document).on('click','.pw-media-pick',function(e){
+    e.preventDefault();
+    var $w=$(this).closest('.pw-media');
+    var f=wp.media({title:'アイコン画像を選択',button:{text:'このアイコンを使う'},library:{type:'image'},multiple:false});
+    f.on('select',function(){
+      var a=f.state().get('selection').first().toJSON();
+      var u=(a.sizes&&a.sizes.thumbnail)?a.sizes.thumbnail.url:a.url;
+      $w.find('input.pw-media-id').val(a.id);
+      $w.find('.pw-media-none').hide();
+      $w.find('.pw-media-prev').attr('src',u).show();
+      $w.find('.pw-media-clear').show();
+    });
+    f.open();
+  });
+  $(document).on('click','.pw-media-clear',function(e){
+    e.preventDefault();
+    var $w=$(this).closest('.pw-media');
+    $w.find('input.pw-media-id').val('');
+    $w.find('.pw-media-prev').hide();
+    $w.find('.pw-media-none').show();
+    $(this).hide();
+  });
+});
+</script>
+    <?php
+}
+
+function preworks_media_field( $field, $value ) {
+    preworks_media_picker_assets();
+    $id  = absint( $value );
+    $url = $id ? wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
+    echo '<div class="pw-media">';
+    echo '<div class="pw-media-none"' . ( $url ? ' style="display:none"' : '' ) . '>未設定</div>';
+    echo '<img class="pw-media-prev" src="' . esc_url( $url ) . '" alt=""' . ( $url ? '' : ' style="display:none"' ) . '>';
+    echo '<input type="hidden" class="pw-media-id" name="' . esc_attr( $field ) . '" value="' . esc_attr( $id ? $id : '' ) . '">';
+    echo '<button type="button" class="button pw-media-pick">画像を選択</button>';
+    echo '<button type="button" class="button-link pw-media-clear"' . ( $url ? '' : ' style="display:none"' ) . '>削除</button>';
+    echo '</div>';
+}
+
+function preworks_voice_metabox_html( $post ) {
+    wp_nonce_field( 'preworks_voice_save', 'preworks_voice_nonce' );
+    echo preworks_slug_warning_box( $post->ID );
+    $catch   = get_post_meta( $post->ID, '_pw_catch', true );
+    $youtube = get_post_meta( $post->ID, '_pw_youtube', true );
+    $profile = get_post_meta( $post->ID, '_pw_profile', true );
+    $qa      = get_post_meta( $post->ID, '_pw_qa', true );
+    $attr    = get_post_meta( $post->ID, '_pw_attr', true );
+    $hl      = get_post_meta( $post->ID, '_pw_hl', true );
+    $comment = get_post_meta( $post->ID, '_pw_comment', true );
+    $name_l  = get_post_meta( $post->ID, '_pw_name_l', true );
+    $name_r  = get_post_meta( $post->ID, '_pw_name_r', true );
+    $icon_l  = get_post_meta( $post->ID, '_pw_icon_l', true );
+    $icon_r  = get_post_meta( $post->ID, '_pw_icon_r', true );
+    $ph = "■受講のきっかけは？\n質問者：まずは、受講しようと思ったきっかけを教えてください。\n本人：「在宅ワーク 未経験」で検索しては、怪しい広告ばかりの毎日でした。\n\nそんなときに、preworksの無料相談を見つけました。\n質問者：**現場を運営している会社**が監修している点が決め手だったんですね。";
+    $s = 'style="width:100%;max-width:640px"';
+    echo '<style>.pwf label{display:block;margin:14px 0 4px;font-weight:600}.pwf .hint{color:#888;font-size:12px;font-weight:400}.pwf hr{margin:20px 0;border:0;border-top:1px solid #eee}</style>';
+    echo '<div class="pwf">';
+    echo '<p style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:13px;">下の欄を埋めるだけでページが完成します。<b>本文（下のエディタ）は使いません。</b><br>①タイトル＝修了生名（画面上の「タイトルを追加」）／②アイキャッチ画像＝修了生の写真（吹き出しのアイコンになります）<br><b>写真は横長で用意してください（推奨 1200×900＝4:3）。</b></p>';
+    echo '<label>キャッチコピー <span class="hint">（詳細ページ上部の大きな見出し。例：「私なんか」が、変わった2ヶ月。）</span></label>';
+    echo '<input type="text" name="pw_catch" value="' . esc_attr( $catch ) . '" ' . $s . '>';
+    echo '<label>YouTube動画ID <span class="hint">（https://youtu.be/XXXX の XXXX 部分だけ。動画なしなら空欄）</span></label>';
+    echo '<input type="text" name="pw_youtube" value="' . esc_attr( $youtube ) . '" ' . $s . '>';
+    echo '<label>プロフィール <span class="hint">（Profile枠に出る紹介文）</span></label>';
+    echo '<textarea name="pw_profile" rows="2" ' . $s . '>' . esc_textarea( $profile ) . '</textarea>';
+    echo '<hr><p style="font-weight:700;margin:0 0 4px;">▼ 吹き出しの名前とアイコン</p>';
+    echo '<p style="font-size:12px;color:#666;margin:0 0 6px;">記事ごとに変更できます。空欄のままなら（　）内が使われます。</p>';
+    echo '<label>左（本人）の名前 <span class="hint">（空欄＝タイトルの文字。タイトルと違う表示名にしたいときに入力）</span></label>';
+    echo '<input type="text" name="pw_name_l" value="' . esc_attr( $name_l ) . '" ' . $s . ' placeholder="' . esc_attr( get_the_title( $post ) ) . '">';
+    echo '<label>左（本人）のアイコン <span class="hint">（空欄＝アイキャッチ画像）</span></label>';
+    preworks_media_field( 'pw_icon_l', $icon_l );
+    echo '<label>右（聞き手）の名前 <span class="hint">（空欄＝質問者）</span></label>';
+    echo '<input type="text" name="pw_name_r" value="' . esc_attr( $name_r ) . '" ' . $s . ' placeholder="質問者">';
+    echo '<label>右（聞き手）のアイコン <span class="hint">（空欄＝名前の頭文字の丸バッジ）</span></label>';
+    preworks_media_field( 'pw_icon_r', $icon_r );
+    echo '<hr><label>インタビュー（Q&amp;A・会話）</label>';
+    echo '<div style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:12.5px;line-height:1.9;margin:0 0 6px;max-width:640px;">'
+       . '<b>書き方</b><br>'
+       . '・<code>■</code> で始まる行 ＝ 質問見出し<br>'
+       . '・<code>質問者：</code> で始まる行 ＝ <b>右</b>の吹き出しが始まる<br>'
+       . '・<code>本人：</code> で始まる行 ＝ <b>左</b>の吹き出しが始まる<br>'
+       . '・記号を付けない行 ＝ <b>直前の吹き出しの続き（改行）</b><br>'
+       . '・空行 ＝ 吹き出しの中の<b>一行スペース</b>（同じ人の発言が続くかぎり1つの吹き出しにまとまります）<br>'
+       . '・<code>---</code> だけの行 ＝ 同じ人でも<b>そこで吹き出しを分ける</b><br>'
+       . '・装飾： <code>**太字**</code> ／ <code>__下線__</code> ／ <code>==マーカー==</code> ／ <code>[表示文字](URL)</code>'
+       . '</div>';
+    echo '<textarea name="pw_qa" rows="12" ' . $s . ' placeholder="' . esc_attr( $ph ) . '">' . esc_textarea( $qa ) . '</textarea>';
+    echo '<hr><p style="font-weight:700;margin:0 0 4px;">▼ 一覧カードに出る内容</p>';
+    echo '<label>属性 <span class="hint">（例：30代・2児ママ｜前職：コールセンター）</span></label>';
+    echo '<input type="text" name="pw_attr" value="' . esc_attr( $attr ) . '" ' . $s . '>';
+    echo '<label>ハイライト <span class="hint">（カードの太字の一言）</span></label>';
+    echo '<input type="text" name="pw_hl" value="' . esc_attr( $hl ) . '" ' . $s . '>';
+    echo '<label>コメント <span class="hint">（ハイライトの下の説明文）</span></label>';
+    echo '<textarea name="pw_comment" rows="2" ' . $s . '>' . esc_textarea( $comment ) . '</textarea>';
+    echo '</div>';
+}
+function preworks_voice_save( $post_id ) {
+    if ( ! isset( $_POST['preworks_voice_nonce'] ) || ! wp_verify_nonce( $_POST['preworks_voice_nonce'], 'preworks_voice_save' ) ) return;
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+    if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+    $text = array( 'pw_catch' => '_pw_catch', 'pw_youtube' => '_pw_youtube', 'pw_attr' => '_pw_attr', 'pw_hl' => '_pw_hl', 'pw_name_l' => '_pw_name_l', 'pw_name_r' => '_pw_name_r' );
+    foreach ( $text as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, sanitize_text_field( wp_unslash( $_POST[ $k ] ) ) );
+    }
+    $area = array( 'pw_profile' => '_pw_profile', 'pw_comment' => '_pw_comment', 'pw_qa' => '_pw_qa' );
+    foreach ( $area as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, sanitize_textarea_field( wp_unslash( $_POST[ $k ] ) ) );
+    }
+    $ids = array( 'pw_icon_l' => '_pw_icon_l', 'pw_icon_r' => '_pw_icon_r' );
+    foreach ( $ids as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, absint( $_POST[ $k ] ) );
+    }
+}
+add_action( 'save_post_voice', 'preworks_voice_save' );
+
+// 左右の名前・アイコンをまとめて取得
+function preworks_qa_opts( $post_id ) {
+    $il = absint( get_post_meta( $post_id, '_pw_icon_l', true ) );
+    $ir = absint( get_post_meta( $post_id, '_pw_icon_r', true ) );
+    return array(
+        'name_l' => (string) get_post_meta( $post_id, '_pw_name_l', true ),
+        'name_r' => (string) get_post_meta( $post_id, '_pw_name_r', true ),
+        'icon_l' => $il ? (string) wp_get_attachment_image_url( $il, 'thumbnail' ) : '',
+        'icon_r' => $ir ? (string) wp_get_attachment_image_url( $ir, 'thumbnail' ) : '',
+    );
+}
+
+// ===== インライン装飾（ブログ本文・Q&A吹き出しで共通） =====
+// **太字** / __下線__ / ==マーカー== / [表示文字](URL)
+function preworks_inline_deco( $s ) {
+    $s = esc_html( (string) $s );
+    $s = preg_replace( '/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $s );
+    $s = preg_replace( '/__(.+?)__/u', '<u>$1</u>', $s );
+    $s = preg_replace( '/==(.+?)==/u', '<mark>$1</mark>', $s );
+    $s = preg_replace_callback( '/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/u', function ( $m ) {
+        return '<a href="' . esc_url( $m[2] ) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
+    }, $s );
+    return $s;
+}
+
+// 吹き出しアバター（画像があれば画像、無ければ名前の頭文字バッジ）
+function preworks_qa_avatar( $img_url, $name, $side ) {
+    if ( $img_url ) {
+        return '<img class="vc-ava" src="' . esc_url( $img_url ) . '" alt="">';
+    }
+    $initial = $name !== '' ? mb_substr( $name, 0, 1 ) : ( $side === 'cs' ? '質' : '本' );
+    return '<div class="vc-w' . ( $side === 'you' ? ' vc-w-you' : '' ) . '">' . esc_html( $initial ) . '</div>';
+}
+
+// Q&A テキストをチャット吹き出しHTMLに変換
+// $opts: name_l / icon_l / name_r / icon_r（未指定なら $name・$photo・「質問者」・頭文字バッジ）
+function preworks_render_voice_qa( $qa, $photo, $name, $opts = array() ) {
+    $o = wp_parse_args( (array) $opts, array(
+        'name_l' => '', 'icon_l' => '', 'name_r' => '', 'icon_r' => '',
+    ) );
+    $name_l = $o['name_l'] !== '' ? $o['name_l'] : (string) $name;
+    $icon_l = $o['icon_l'] !== '' ? $o['icon_l'] : (string) $photo;
+    $name_r = $o['name_r'] !== '' ? $o['name_r'] : '質問者';
+    $icon_r = $o['icon_r'];
+
+    $av_l = '<div class="vc-av">' . preworks_qa_avatar( $icon_l, $name_l, 'you' ) . '<div class="vc-name">' . esc_html( $name_l ) . '</div></div>';
+    $av_r = '<div class="vc-av">' . preworks_qa_avatar( $icon_r, $name_r, 'cs' ) . '<div class="vc-name">' . esc_html( $name_r ) . '</div></div>';
+
+    $lines = preg_split( '/\r\n|\r|\n/', (string) $qa );
+
+    // --- 1st pass: 見出し / 吹き出しのブロックに分解 ---
+    $items = array();   // array('q'=>text) | array('b'=>side,'lines'=>array()) | array('bar'=>true)
+    $buf   = array();
+    $side  = '';
+
+    $flush = function () use ( &$buf, &$side, &$items ) {
+        while ( $buf && $buf[0] === '' )     { array_shift( $buf ); }
+        while ( $buf && end( $buf ) === '' ) { array_pop( $buf ); }
+        if ( $buf ) { $items[] = array( 'b' => ( $side === 'cs' ? 'cs' : 'you' ), 'lines' => $buf ); }
+        $buf = array(); $side = '';
+    };
+
+    foreach ( $lines as $raw ) {
+        $t = trim( $raw );
+
+        // 空行 ＝ ブロックの区切り（同じ話者が続く場合は後段で1つにまとめる）
+        if ( $t === '' && $raw === '' ) { $flush(); continue; }
+        // 空白だけの行 / 「//」だけの行 ＝ 吹き出しの中の一行スペース
+        if ( $t === '' || $t === '//' || $t === '／／' ) {
+            if ( $side !== '' ) { $buf[] = ''; }
+            continue;
+        }
+        // 「---」だけの行 ＝ 同じ話者でも吹き出しを分ける（結合を禁止する仕切り）
+        if ( preg_match( '/^[-ー－―‐]{3,}$/u', $t ) ) { $flush(); $items[] = array( 'bar' => true ); continue; }
+
+        // ※「質問者：」は右の話者。見出しの「質問：」より先に判定する
+        $is_speaker_r = (bool) preg_match( '/^(質問者|コンサルタント|コンサル|W|C)[\s:：]/u', $t );
+        $is_speaker_l = (bool) preg_match( '/^(本人|A)[\s:：]/u', $t );
+
+        if ( ! $is_speaker_r && ( mb_substr( $t, 0, 1 ) === '■' || preg_match( '/^(Q|質問)[\s:：]/u', $t ) ) ) {
+            $flush();
+            $items[] = array( 'q' => preg_replace( '/^(■|Q|質問)[\s:：]*/u', '', $t ) );
+            continue;
+        }
+        if ( $is_speaker_r ) {
+            $flush();
+            $side  = 'cs';
+            $buf[] = preg_replace( '/^(質問者|コンサルタント|コンサル|W|C)[\s:：]*/u', '', $t );
+            continue;
+        }
+        if ( $is_speaker_l ) {
+            $flush();
+            $side  = 'you';
+            $buf[] = preg_replace( '/^(本人|A)[\s:：]*/u', '', $t );
+            continue;
+        }
+        // 記号なしの行＝直前の吹き出しの続き（改行）。吹き出しが開いていなければ左（本人）で開始
+        if ( $side === '' ) { $side = 'you'; }
+        $buf[] = $t;
+    }
+    $flush();
+
+    // --- 2nd pass: 隣り合う同じ話者の吹き出しを1つにまとめる（間は一行スペース） ---
+    $merged = array();
+    foreach ( $items as $it ) {
+        if ( isset( $it['bar'] ) ) { $merged[] = $it; continue; }
+        $prev = $merged ? $merged[ count( $merged ) - 1 ] : null;
+        if ( isset( $it['b'] ) && $prev && isset( $prev['b'] ) && $prev['b'] === $it['b'] ) {
+            $merged[ count( $merged ) - 1 ]['lines'] = array_merge( $prev['lines'], array( '' ), $it['lines'] );
+            continue;
+        }
+        $merged[] = $it;
+    }
+
+    // --- 3rd pass: HTML化 ---
+    $out = '';
+    foreach ( $merged as $it ) {
+        if ( isset( $it['bar'] ) ) continue;
+        if ( isset( $it['q'] ) ) {
+            $out .= '<div class="vchat-q">' . preworks_inline_deco( $it['q'] ) . '</div>';
+            continue;
+        }
+        $body = implode( '<br>', array_map( 'preworks_inline_deco', $it['lines'] ) );
+        $out .= $it['b'] === 'cs'
+            ? '<div class="vc-row vc-cs">' . $av_r . '<div class="vc-bubble">' . $body . '</div></div>'
+            : '<div class="vc-row vc-you">' . $av_l . '<div class="vc-bubble">' . $body . '</div></div>';
+    }
+    return $out;
+}
+
+// ===== 修了生の声 入稿用ショートコード(divを触らず簡単入力・エディタで崩れない) =====
+// [vvideo id="動画ID"] / [vprofile]…[/vprofile] / [vq]質問[/vq] / [vyou img="写真URL"]本文[/vyou] / [vcs]本文[/vcs]
+function preworks_sc_vvideo( $atts ) {
+    $a = shortcode_atts( array( 'id' => '' ), $atts );
+    return '<div style="margin:0 0 32px;position:relative;width:100%;padding-bottom:56.25%;height:0;border-radius:16px;overflow:hidden;box-shadow:0 18px 44px rgba(150,80,45,.14);background:#000;"><iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" src="https://www.youtube.com/embed/' . esc_attr( $a['id'] ) . '" title="修了生インタビュー" loading="lazy" allowfullscreen></iframe></div>';
+}
+add_shortcode( 'vvideo', 'preworks_sc_vvideo' );
+function preworks_sc_vprofile( $atts, $content = null ) {
+    return '<div class="callout"><strong>Profile</strong><br>' . wp_kses_post( do_shortcode( $content ) ) . '</div>';
+}
+add_shortcode( 'vprofile', 'preworks_sc_vprofile' );
+function preworks_sc_vq( $atts, $content = null ) {
+    return '<div class="vchat-q">' . esc_html( trim( $content ) ) . '</div>';
+}
+add_shortcode( 'vq', 'preworks_sc_vq' );
+function preworks_sc_vyou( $atts, $content = null ) {
+    $a = shortcode_atts( array( 'img' => '', 'name' => '' ), $atts );
+    $img = $a['img'] ? '<img class="vc-ava" src="' . esc_url( $a['img'] ) . '" alt="">' : '';
+    $name = $a['name'] ? '<div class="vc-name">' . esc_html( $a['name'] ) . '</div>' : '';
+    return '<div class="vc-row vc-you"><div class="vc-av">' . $img . $name . '</div><div class="vc-bubble">' . wp_kses_post( trim( $content ) ) . '</div></div>';
+}
+add_shortcode( 'vyou', 'preworks_sc_vyou' );
+function preworks_sc_vcs( $atts, $content = null ) {
+    $a = shortcode_atts( array( 'img' => '', 'name' => '質問者' ), $atts );
+    $nm = $a['name'] !== '' ? $a['name'] : '質問者';
+    $av = preworks_qa_avatar( $a['img'], $nm, 'cs' );
+    return '<div class="vc-row vc-cs"><div class="vc-av">' . $av . '<div class="vc-name">' . esc_html( $nm ) . '</div></div><div class="vc-bubble">' . wp_kses_post( trim( $content ) ) . '</div></div>';
+}
+add_shortcode( 'vcs', 'preworks_sc_vcs' );
+
 
 // パーマリンクを Post ID 形式に（日本語スラッグ回避＝吉田さん要望。固定ページは従来どおりスラッグ /about/ 等）
 function preworks_set_permalink() {

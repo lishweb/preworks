@@ -1431,3 +1431,59 @@ body{font-size:16px;}
   .contact-lead{line-height:1.95;}
 }
 .cform-done .cd-sub{margin-top:14px;font-size:clamp(13px,1.6vw,14px);color:var(--muted);line-height:1.8;}
+
+/* =========================================================================
+ * 修了生の声（voice） v1.0.12
+ * テスト環境 1.3.50 から移植。重複した値は「後勝ち」を解決して最終値のみ記載。
+ *
+ * ⚠️ 既存の見た目を変えないためのスコープ設計
+ *   ・トップの0件フォールバックとLP（template-parts/lp-body.php）の
+ *     修了生カードは <div class="vcard"> で、写真は 1024×1024（1:1）。
+ *     カスタム投稿のカードは <a class="vcard"> なので、4:3 は a.vcard だけに当てる。
+ *   ・従来の YouTube ボタン（.vlink）のスタイルは変更しない。
+ *     テスト側は .v-detail-btn と .vlink を同じ規則でまとめているが、
+ *     ここでは .v-detail-btn だけに適用する。
+ * ========================================================================= */
+
+/* --- 一覧カード（カスタム投稿のみ／リンクカード） --- */
+a.vcard .vph{aspect-ratio:4/3;height:auto;}
+.vcard .v-attr{display:inline-block;border:1px solid var(--terra);color:var(--terra);border-radius:999px;padding:4px 14px;font-size:12.5px;font-weight:600;margin:0 0 14px;line-height:1.6;}
+.vcard .vhl-q{position:relative;font-weight:700;font-size:clamp(15px,1.9vw,17px);color:#3a3129;line-height:1.55;margin:0 0 10px;padding-left:22px;}
+.vcard .vhl-q::before{content:"\201C";position:absolute;left:0;top:2px;color:var(--terra);font-size:26px;font-weight:700;line-height:1;font-family:Georgia,serif;}
+.vcard .v-comment{margin:0 0 18px;font-size:13.5px;color:#6b5f52;line-height:1.85;}
+.vcard .v-detail-btn{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--terra);color:var(--terra);border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;text-align:left;text-decoration:none;transition:.2s;}
+.vcard .v-detail-btn:hover{background:var(--terra);color:#fff;}
+.vcard .v-detail-btn .btn-arw{color:var(--terra);font-size:11px;margin-left:8px;}
+.vcard .v-detail-btn:hover .btn-arw{color:#fff;}
+.voice .vcard .v-detail-btn{margin-top:auto;}
+
+/* --- 詳細ページ：質問見出し --- */
+.vchat-q{font-weight:700;font-size:clamp(16px,2vw,19px);color:#3a3129;margin:26px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--marker);}
+
+/* --- 詳細ページ：Q&Aの吹き出し --- */
+.vc-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;}
+.vc-you{flex-direction:row;}
+.vc-cs{flex-direction:row-reverse;}
+.vc-av{flex:0 0 auto;width:58px;text-align:center;}
+.vc-ava{width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;margin:0 auto;border:1px solid #eee3d6;}
+.vc-w{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:var(--terra);color:#fff;font-weight:800;font-size:18px;line-height:1;margin:0 auto;}
+.vc-w-you{background:var(--gold);}
+.vc-name{font-size:10.5px;color:var(--muted);margin-top:3px;word-break:keep-all;overflow-wrap:anywhere;line-height:1.3;}
+.vc-bubble{position:relative;max-width:78%;background:#f4efe8;border-radius:16px;padding:13px 17px;font-size:14px;line-height:1.75;color:#3a3129;}
+.vc-bubble br{line-height:inherit;}
+.vc-bubble strong{font-weight:700;}
+.vc-bubble u{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;}
+.vc-bubble mark{background:linear-gradient(transparent 55%,var(--marker) 55%);color:inherit;padding:0 .06em;}
+.vc-bubble a{color:var(--terra);text-decoration:underline;}
+.vc-you .vc-bubble{background:#FFF1E1;}
+.vc-you .vc-bubble::before{content:"";position:absolute;left:-7px;top:16px;border:7px solid transparent;border-right-color:#FFF1E1;border-left:0;}
+.vc-cs .vc-bubble{background:#F1EFEC;}
+.vc-cs .vc-bubble::after{content:"";position:absolute;right:-7px;top:16px;border:7px solid transparent;border-left-color:#F1EFEC;border-right:0;}
+@media(max-width:600px){
+  .vc-row{gap:8px;}
+  .vc-av{width:56px;}
+  .vc-ava,.vc-w{width:42px;height:42px;}
+  .vc-w{font-size:16px;}
+  .vc-name{font-size:9.5px;letter-spacing:-.02em;}
+  .vc-bubble{max-width:calc(100% - 64px);font-size:13.5px;}
+}

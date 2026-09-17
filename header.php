@@ -8,13 +8,19 @@
 </head>
 <body <?php body_class( 'grain' ); ?>>
 <?php wp_body_open(); ?>
-<?php $preworks_nav_base = preworks_is_lp() ? '' : home_url('/'); // LPではページ内アンカーにして離脱を防ぐ ?>
+<?php
+  $preworks_nav_base = preworks_is_lp() ? '' : home_url('/'); // LPではページ内アンカーにして離脱を防ぐ
+  // 修了生の声は専用ページ（/voice/）を持つ。ただしLPは離脱を防ぐためページ内アンカーのまま。v1.0.12
+  $preworks_voice_url = get_post_type_archive_link( 'voice' );
+  if ( ! $preworks_voice_url ) { $preworks_voice_url = home_url( '/voice/' ); }
+  $preworks_voice_href = preworks_is_lp() ? '#voice' : $preworks_voice_url;
+?>
 <header class="hdr" id="hdr">
   <a class="brand" href="<?php echo preworks_is_lp() ? '#hero' : home_url('/'); ?>">preworks</a>
   <nav>
     <a href="<?php echo $preworks_nav_base; ?>#about">preworksについて</a>
     <a href="<?php echo $preworks_nav_base; ?>#program">プログラム</a>
-    <a href="<?php echo $preworks_nav_base; ?>#voice">修了生の声</a>
+    <a href="<?php echo esc_url( $preworks_voice_href ); ?>">修了生の声</a>
     <a href="<?php echo $preworks_nav_base; ?>#mentor">メンター紹介</a>
     <a href="<?php echo home_url('/faq/'); ?>">よくある質問</a>
   </nav>

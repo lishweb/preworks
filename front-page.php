@@ -299,9 +299,40 @@
     <div class="wrap">
       <div class="headblock"><span class="eyebrow">Voice</span><h2 class="htitle">未経験から在宅ワークデビュー preworks <span class="mk">修了生の声</span></h2><p class="voice-badge">オンライン秘書デビュー率 <b>100<span class="vb-u">%</span></b><span class="vb-sub">修了生6名中6名がお仕事獲得につながっています（※2026年7月時点）</span></p></div>
       <div class="vgrid">
-        <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt="大城さん"><div class="vbody"><div class="who">大城さん<small>30代・2児ママ（6歳・0歳）｜前職：コールセンター業務</small></div><p>新しいことを学ぶ毎日が新鮮でした。初めは事務経験がほぼゼロで不安でしたが、メンターさんの支えのおかげで、最後までやり切れました！</p><a class="vlink" href="https://youtu.be/EhX5RDQ5Jfk" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
-        <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-2.jpg" alt="Yさん"><div class="vbody"><div class="who">Yさん<small>50代・1児ママ（19歳）｜前職：営業事務</small></div><p>事務経験はありましたが、自分が必要だと思っていた知識が狭かったと痛感しました。現役のオンライン秘書に相談できるため信頼して学べる環境でした！</p><a class="vlink" href="https://youtu.be/91_5nU7nGL8" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
-        <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-3.jpg" alt="Kさん"><div class="vbody"><div class="who">Kさん<small>40代・2児ママ（6歳・1歳）｜前職：専業主婦</small></div><p>受講後はURAKATA以外でも業務委託の契約につながり、学んだことを実務でも活かせています。失敗しても次の改善策を自分で考えられるようになり、自信につながりました！</p><a class="vlink" href="https://youtu.be/F8_b3OvXHj4" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
+        <?php
+          /* 修了生の声（voice）の最新3件を表示する。v1.0.12
+             0件のあいだは、下の else 側にある従来の固定3枚をそのまま表示する
+             （トップの「修了生の声」欄が空になるのを避けるためのフォールバック）。
+             坂さんが3名分を公開した時点で、自動的に上の一覧へ切り替わる。 */
+          $pw_vq = new WP_Query( array(
+              'post_type'        => 'voice',
+              'posts_per_page'   => 3,
+              'post_status'      => 'publish',
+              'no_found_rows'    => true,
+              'ignore_sticky_posts' => true,
+          ) );
+          if ( $pw_vq->have_posts() ) :
+            while ( $pw_vq->have_posts() ) : $pw_vq->the_post();
+              $v_attr = get_post_meta( get_the_ID(), '_pw_attr', true );
+              $v_hl   = get_post_meta( get_the_ID(), '_pw_hl', true );
+              $v_cm   = get_post_meta( get_the_ID(), '_pw_comment', true );
+        ?>
+          <a class="vcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+            <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'class' => 'vph', 'alt' => get_the_title() ) ); } else { ?><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt=""><?php } ?>
+            <div class="vbody">
+              <div class="who"><?php the_title(); ?></div>
+              <?php if ( $v_attr ) : ?><span class="v-attr"><?php echo esc_html( $v_attr ); ?></span><?php endif; ?>
+              <?php if ( $v_hl ) : ?><p class="vhl-q"><?php echo esc_html( $v_hl ); ?></p><?php endif; ?>
+              <?php if ( $v_cm ) : ?><p class="v-comment"><?php echo esc_html( $v_cm ); ?></p><?php endif; ?>
+              <span class="v-detail-btn">詳細はこちら<span class="btn-arw">▶</span></span>
+            </div>
+          </a>
+        <?php endwhile; wp_reset_postdata(); else : ?>
+        <?php /* ===== 0件のときのフォールバック：従来の固定3枚 ===== */ ?>
+          <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt="大城さん"><div class="vbody"><div class="who">大城さん<small>30代・2児ママ（6歳・0歳）｜前職：コールセンター業務</small></div><p>新しいことを学ぶ毎日が新鮮でした。初めは事務経験がほぼゼロで不安でしたが、メンターさんの支えのおかげで、最後までやり切れました！</p><a class="vlink" href="https://youtu.be/EhX5RDQ5Jfk" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
+          <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-2.jpg" alt="Yさん"><div class="vbody"><div class="who">Yさん<small>50代・1児ママ（19歳）｜前職：営業事務</small></div><p>事務経験はありましたが、自分が必要だと思っていた知識が狭かったと痛感しました。現役のオンライン秘書に相談できるため信頼して学べる環境でした！</p><a class="vlink" href="https://youtu.be/91_5nU7nGL8" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
+          <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-3.jpg" alt="Kさん"><div class="vbody"><div class="who">Kさん<small>40代・2児ママ（6歳・1歳）｜前職：専業主婦</small></div><p>受講後はURAKATA以外でも業務委託の契約につながり、学んだことを実務でも活かせています。失敗しても次の改善策を自分で考えられるようになり、自信につながりました！</p><a class="vlink" href="https://youtu.be/F8_b3OvXHj4" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
+        <?php endif; ?>
       </div>
       <p class="slider-hint">← 横にスワイプして他の声を見る →</p>
     </div>
