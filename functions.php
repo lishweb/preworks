@@ -311,6 +311,7 @@ function preworks_voice_metabox_html( $post ) {
     echo '<style>.pwf label{display:block;margin:14px 0 4px;font-weight:600}.pwf .hint{color:#888;font-size:12px;font-weight:400}.pwf hr{margin:20px 0;border:0;border-top:1px solid #eee}</style>';
     echo '<div class="pwf">';
     echo '<p style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:13px;">下の欄を埋めるだけでページが完成します。<b>本文（下のエディタ）は使いません。</b><br>①タイトル＝修了生名（画面上の「タイトルを追加」）／②アイキャッチ画像＝修了生の写真（吹き出しのアイコンになります）<br><b>写真は横長で用意してください（推奨 1200×900＝4:3）。</b></p>';
+    echo preworks_detail_ready_field( $post->ID, '詳細はこちら ▶' );
     echo '<label>キャッチコピー <span class="hint">（詳細ページ上部の大きな見出し。例：「私なんか」が、変わった2ヶ月。）</span></label>';
     echo '<input type="text" name="pw_catch" value="' . esc_attr( $catch ) . '" ' . $s . '>';
     echo '<label>YouTube動画ID <span class="hint">（https://youtu.be/XXXX の XXXX 部分だけ。動画なしなら空欄）</span></label>';
@@ -363,6 +364,12 @@ function preworks_voice_save( $post_id ) {
     $ids = array( 'pw_icon_l' => '_pw_icon_l', 'pw_icon_r' => '_pw_icon_r' );
     foreach ( $ids as $k => $m ) {
         if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, absint( $_POST[ $k ] ) );
+    }
+    // 下層ページの公開チェック。v1.0.18
+    // チェックを外すと $_POST にキーが来ないため、hidden の目印で「この画面から
+    // 保存された」ことを判定してから 0 を書き込む（他の保存処理で消えないように）。
+    if ( isset( $_POST['pw_detail_ready_present'] ) ) {
+        update_post_meta( $post_id, '_pw_detail_ready', empty( $_POST['pw_detail_ready'] ) ? '' : '1' );
     }
 }
 add_action( 'save_post_voice', 'preworks_voice_save' );
@@ -591,7 +598,39 @@ add_action( 'pre_get_posts', 'preworks_mentor_archive_order' );
  */
 function preworks_entry_is_ready( $post_id = null ) {
     $post_id = $post_id ? $post_id : get_the_ID();
-    return ( '' !== trim( (string) get_post_meta( $post_id, '_pw_catch', true ) ) );
+    return ( '1' === (string) get_post_meta( $post_id, '_pw_detail_ready', true ) );
+}
+
+/*
+ * 1.0.18：判定をキャッチコピーの有無から「下層ページを公開する」チェックボックス
+ * （_pw_detail_ready）に変更した。
+ *
+ * ⚠️ 坂さん依頼（9/24）「メンターの下層ページ…記事の作成が途中のため、一度非公開に
+ *    できますでしょうか？」に対応するため。既存の記事にはこのメタが無いので、
+ *    反映した時点で mentor・voice の全記事が自動的に非公開になる。
+ *
+ * ⚠️ WordPressの「非公開」ステータスは使わない。それをやると投稿がクエリから外れ、
+ *    トップと一覧のカード自体が消えて従来の固定カードに戻ってしまう（No.12の表示が壊れる）。
+ *    カードは出したまま、遷移と検索インデックスだけを止めるのが目的。
+ */
+function preworks_detail_ready_field( $post_id, $linklabel ) {
+    $on = preworks_entry_is_ready( $post_id );
+    $h  = '<hr><p style="font-weight:700;margin:0 0 4px;">▼ 下層ページ（詳細ページ）の公開</p>';
+    $h .= '<label style="display:block;margin:6px 0 4px;font-weight:600;">';
+    $h .= '<input type="hidden" name="pw_detail_ready_present" value="1">';
+    $h .= '<input type="checkbox" name="pw_detail_ready" value="1"' . ( $on ? ' checked' : '' ) . '> 下層ページを公開する';
+    $h .= '</label>';
+    $h .= '<p style="font-size:12.5px;line-height:1.9;color:#555;max-width:640px;margin:0 0 4px;">'
+        . 'チェックを<b>外している間</b>：一覧とトップのカードは今までどおり表示されますが、'
+        . '「' . esc_html( $linklabel ) . '」は出ず、カードをクリックしても移動しません。'
+        . '詳細ページのURLを直接開いても一覧ページに転送され、検索結果にも出ません。'
+        . '<b>ログイン中の管理者だけは中身を確認できます。</b><br>'
+        . '記事を書き終えてからチェックを入れてください。</p>';
+    if ( ! $on ) {
+        $h = '<div style="background:#fcf9e8;border:1px solid #e0d48a;border-left-width:4px;padding:2px 14px 12px;border-radius:4px;margin:14px 0;">'
+           . $h . '<p style="margin:0;font-size:12.5px;color:#7a6a1f;"><b>現在このページは非公開です。</b></p></div>';
+    }
+    return $h;
 }
 // 1.0.16 で mentor 専用として作った関数。voice でも同じ判定を使うので中身を
 // preworks_entry_is_ready() に移した。呼び出し側はそのままでよい。
@@ -674,6 +713,38 @@ function preworks_mentor_wp_robots( $robots ) {
 }
 add_filter( 'wp_robots', 'preworks_mentor_wp_robots' );
 
+/*
+ * 下層ページが未公開のあいだ、詳細ページを一覧ページへ転送する。v1.0.18
+ * 301ではなく302。あとでチェックを入れて公開する前提の一時的な非公開なので、
+ * 恒久移動としてキャッシュされると公開に切り替えても旧転送が残る。
+ * ログイン中の編集権限者は転送しない（坂さんが中身を仕上げ・確認できるように）。
+ */
+function preworks_detail_guard() {
+    if ( is_admin() || is_preview() ) return;
+    if ( ! is_singular( array( 'mentor', 'voice' ) ) ) return;
+    $id = get_queried_object_id();
+    if ( ! $id || preworks_entry_is_ready( $id ) ) return;
+    if ( current_user_can( 'edit_posts' ) ) return;
+    $url = get_post_type_archive_link( get_post_type( $id ) );
+    if ( ! $url ) { $url = home_url( '/' ); }
+    wp_safe_redirect( $url, 302 );
+    exit;
+}
+add_action( 'template_redirect', 'preworks_detail_guard', 1 );
+
+// 管理者が未公開の詳細ページを見ているとき、公開済みと勘違いしないよう明示する。v1.0.18
+function preworks_detail_guard_banner() {
+    if ( ! is_singular( array( 'mentor', 'voice' ) ) ) return;
+    $id = get_queried_object_id();
+    if ( ! $id || preworks_entry_is_ready( $id ) ) return;
+    if ( ! current_user_can( 'edit_posts' ) ) return;
+    echo '<div style="position:relative;z-index:9999;background:#7a6a1f;color:#fff;font-size:13.5px;line-height:1.7;padding:10px 16px;text-align:center;">'
+       . 'このページは<b>非公開</b>です。ログイン中の管理者にだけ表示されています。'
+       . '公開するには編集画面の「<b>下層ページを公開する</b>」にチェックを入れてください。'
+       . '</div>' . "\n";
+}
+add_action( 'wp_body_open', 'preworks_detail_guard_banner' );
+
 // 属性テキスト（例：オンライン秘書歴 3年｜40代｜3児ママ）を既存の見た目に整形
 function preworks_mentor_attr_html( $attr ) {
     $out = esc_html( $attr );
@@ -726,6 +797,7 @@ function preworks_mentor_metabox_html( $post ) {
     echo '<style>.pwf label{display:block;margin:14px 0 4px;font-weight:600}.pwf .hint{color:#888;font-size:12px;font-weight:400}.pwf hr{margin:20px 0;border:0;border-top:1px solid #eee}</style>';
     echo '<div class="pwf">';
     echo '<p style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:13px;">下の欄を埋めるだけでページが完成します。<b>本文（下のエディタ）は使いません。</b><br>①タイトル＝メンター名（画面上の「タイトルを追加」）／②アイキャッチ画像＝顔写真（一覧カードと吹き出しのアイコンになります）<br><b>顔写真は縦長で用意してください（推奨 960×1200＝4:5）。</b>一覧・トップのカードは縦長で表示されます。</p>';
+    echo preworks_detail_ready_field( $post->ID, 'プロフィールを見る →' );
     echo '<label>キャッチコピー <span class="hint">（詳細ページ上部の大きな見出し）</span></label>';
     echo '<input type="text" name="pw_catch" value="' . esc_attr( $catch ) . '" ' . $s . '>';
     echo '<label>YouTube動画ID <span class="hint">（https://youtu.be/XXXX の XXXX 部分だけ。動画なしなら空欄でOK）</span></label>';
@@ -781,6 +853,12 @@ function preworks_mentor_save( $post_id ) {
     $ids = array( 'pw_icon_l' => '_pw_icon_l', 'pw_icon_r' => '_pw_icon_r' );
     foreach ( $ids as $k => $m ) {
         if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, absint( $_POST[ $k ] ) );
+    }
+    // 下層ページの公開チェック。v1.0.18
+    // チェックを外すと $_POST にキーが来ないため、hidden の目印で「この画面から
+    // 保存された」ことを判定してから 0 を書き込む（他の保存処理で消えないように）。
+    if ( isset( $_POST['pw_detail_ready_present'] ) ) {
+        update_post_meta( $post_id, '_pw_detail_ready', empty( $_POST['pw_detail_ready'] ) ? '' : '1' );
     }
 }
 add_action( 'save_post_mentor', 'preworks_mentor_save' );

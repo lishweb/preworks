@@ -47,7 +47,7 @@
        このカードは「詳細はこちら」ボタン付きなので、リンクしないカードを混ぜると
        一覧・TOPと挙動が食い違う。キャッチコピーが入った時点で自動的に出てくる。 */
     $rel = new WP_Query( array( 'post_type' => 'mentor', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'menu_order title', 'order' => 'ASC',
-        'meta_query' => array( array( 'key' => '_pw_catch', 'value' => '', 'compare' => '!=' ) ) ) );
+        'meta_query' => array( array( 'key' => '_pw_detail_ready', 'value' => '1' ) ) ) );
     if ( $rel->have_posts() ) : ?>
   <section class="mentors sec-pad"><span class="orb m soft alt" style="top:40px;right:-100px;"></span><div class="wrap">
     <div class="mod-head" style="text-align:center;margin-bottom:28px;"><span class="eyebrow">Mentor</span><h2 class="htitle">preworksのメンター紹介</h2><p class="subhead">現役のオンライン秘書がマンツーマンでサポート！</p></div>

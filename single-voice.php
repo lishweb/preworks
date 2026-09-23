@@ -35,7 +35,7 @@
        このカードは「詳細はこちら」ボタン付きなので、リンクしないカードを混ぜると
        トップ・一覧と挙動が食い違う。キャッチコピーが入った時点で自動的に出てくる。 */
     $rel = new WP_Query( array( 'post_type' => 'voice', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'rand',
-        'meta_query' => array( array( 'key' => '_pw_catch', 'value' => '', 'compare' => '!=' ) ) ) );
+        'meta_query' => array( array( 'key' => '_pw_detail_ready', 'value' => '1' ) ) ) );
     if ( $rel->have_posts() ) : ?>
   <section class="voice sec-pad"><div class="wrap">
     <div class="mod-head" style="text-align:center;margin-bottom:28px;"><span class="eyebrow">Other Interview</span><h2 class="htitle">他の修了生のインタビュー</h2></div>
