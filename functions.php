@@ -572,6 +572,48 @@ function preworks_mentor_archive_order( $query ) {
 }
 add_action( 'pre_get_posts', 'preworks_mentor_archive_order' );
 
+/*
+ * そのメンターの詳細ページを「見せられる状態」か。v1.0.16
+ *
+ * 判定はキャッチコピー（_pw_catch）が入っているかだけ。
+ *   未入力 → 下層が未入稿。カードをリンクにせず、詳細ページは noindex にする。
+ *   入力済 → 従来どおりカードから詳細ページへ遷移する。
+ *
+ * 投稿チームがキャッチコピーを入れて「更新」した時点で自動的に切り替わるので、
+ * テーマの再反映は不要。
+ *
+ * ⚠️ なぜ _pw_catch なのか
+ *    単一の必須項目で、かつ詳細ページの <h1> になる項目だから。未入力だと
+ *    <h1> が氏名にフォールバックし、その下の行にも氏名が出て重複する。
+ *    _pw_profile は「紹介文の使い回し」で埋まっている運用があるため判定に使えない。
+ * ⚠️ 既存4名（戸田・玉木・仲宗根・髙松）は全員 _pw_catch が入っていることを
+ *    本番サイトで実測済み。この変更による既存ページの表示差はない。
+ */
+function preworks_mentor_is_ready( $post_id = null ) {
+    $post_id = $post_id ? $post_id : get_the_ID();
+    return ( '' !== trim( (string) get_post_meta( $post_id, '_pw_catch', true ) ) );
+}
+
+/*
+ * 下層が未入稿のメンター詳細ページは、一覧・TOPのどちらからもリンクしていない
+ * 孤立ページになる。検索結果に出ても中身が薄いだけなので noindex にする。v1.0.16
+ * follow は残すので、ページ内のリンク（他のメンター・CTA）の評価は通る。
+ * echo ではなく wp_robots フィルタを使う理由：WordPress本体が出す
+ * max-image-preview:large と同じ1つの meta タグにまとめるため。
+ */
+function preworks_mentor_wp_robots( $robots ) {
+    if ( ! is_singular( 'mentor' ) ) {
+        return $robots;
+    }
+    if ( preworks_mentor_is_ready( get_queried_object_id() ) ) {
+        return $robots;
+    }
+    $robots['noindex'] = true;
+    $robots['follow']  = true;
+    return $robots;
+}
+add_filter( 'wp_robots', 'preworks_mentor_wp_robots' );
+
 // 属性テキスト（例：オンライン秘書歴 3年｜40代｜3児ママ）を既存の見た目に整形
 function preworks_mentor_attr_html( $attr ) {
     $out = esc_html( $attr );

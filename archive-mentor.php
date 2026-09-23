@@ -9,16 +9,22 @@
       <div class="mgrid">
         <?php if ( have_posts() ) : while ( have_posts() ) : the_post();
           $attr = get_post_meta( get_the_ID(), '_pw_attr', true );
-          $cm   = get_post_meta( get_the_ID(), '_pw_comment', true ); ?>
-          <a class="mcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;">
+          $cm   = get_post_meta( get_the_ID(), '_pw_comment', true );
+          /* 下層（キャッチコピー）が未入稿ならカードをリンクにしない。v1.0.16
+             .mcard のCSSは a/div どちらにも当たる（a.mcard 限定の指定は無い）ので
+             見た目は変わらない。 */
+          $rdy  = preworks_mentor_is_ready();
+          $tag  = $rdy ? 'a' : 'div';
+          $atts = $rdy ? ' href="' . esc_url( get_permalink() ) . '" style="text-decoration:none;"' : ''; ?>
+          <<?php echo $tag; ?> class="mcard reveal"<?php echo $atts; ?>>
             <?php $ph = preworks_mentor_photo_url(); if ( $ph ) : ?><img src="<?php echo esc_url( $ph ); ?>" alt="<?php the_title_attribute(); ?>"><?php endif; ?>
             <div class="mbody">
               <h3><?php the_title(); ?></h3>
               <?php if ( $attr ) : ?><p class="m-attr"><?php echo preworks_mentor_attr_html( $attr ); ?></p><?php endif; ?>
               <?php if ( $cm ) : ?><p><?php echo esc_html( $cm ); ?></p><?php endif; ?>
-              <p class="mprof-link">プロフィールを見る →</p>
+              <?php if ( $rdy ) : ?><p class="mprof-link">プロフィールを見る →</p><?php endif; ?>
             </div>
-          </a>
+          </<?php echo $tag; ?>>
         <?php endwhile; else : ?>
           <p style="grid-column:1/-1;text-align:center;color:var(--muted);">メンター紹介はまだありません。管理画面の「メンター紹介 → 新規追加」から追加してください。</p>
         <?php endif; ?>

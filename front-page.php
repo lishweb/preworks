@@ -363,16 +363,20 @@
               $m_attr = get_post_meta( get_the_ID(), '_pw_attr', true );
               $m_cm   = get_post_meta( get_the_ID(), '_pw_comment', true );
               $m_ph   = preworks_mentor_photo_url();
+              /* 下層（キャッチコピー）が未入稿ならカードをリンクにしない。v1.0.16 */
+              $m_rdy  = preworks_mentor_is_ready();
+              $m_tag  = $m_rdy ? 'a' : 'div';
+              $m_atts = $m_rdy ? ' href="' . esc_url( get_permalink() ) . '" style="text-decoration:none;color:inherit;"' : '';
         ?>
-          <a class="mcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+          <<?php echo $m_tag; ?> class="mcard reveal"<?php echo $m_atts; ?>>
             <?php if ( $m_ph ) : ?><img src="<?php echo esc_url( $m_ph ); ?>" alt="<?php the_title_attribute(); ?>"><?php endif; ?>
             <div class="mbody">
               <h3><?php the_title(); ?></h3>
               <?php if ( $m_attr ) : ?><p class="m-attr"><?php echo preworks_mentor_attr_html( $m_attr ); ?></p><?php endif; ?>
               <?php if ( $m_cm ) : ?><p><?php echo esc_html( $m_cm ); ?></p><?php endif; ?>
-              <p class="mprof-link">プロフィールを見る →</p>
+              <?php if ( $m_rdy ) : ?><p class="mprof-link">プロフィールを見る →</p><?php endif; ?>
             </div>
-          </a>
+          </<?php echo $m_tag; ?>>
         <?php endwhile; wp_reset_postdata(); else : ?>
         <?php /* ===== 0件のときのフォールバック：従来の固定4枚 ===== */ ?>
           <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-1.jpg" alt="仲宗根 偉子"><div class="mbody"><h3>仲宗根 偉子</h3><p class="m-attr">オンライン秘書歴：3年／40代／3児ママ</p><p>受講中の不安やつまずきにも寄り添いながら、一人ひとりのペースに合わせてサポートします。オンライン秘書として働くための一歩を、一緒に進んでいきましょう！</p></div></div>

@@ -14,7 +14,13 @@
     <div class="bc"><a href="<?php echo home_url('/'); ?>">トップ</a> ／ <a href="<?php echo esc_url( get_post_type_archive_link( 'mentor' ) ); ?>">メンター紹介</a></div>
     <span class="eyebrow">Mentor</span><h1><?php echo wp_kses_post( $catch ); ?></h1>
     <?php if ( $pw_attr || $pw_role ) : ?>
-      <p class="sub"><?php the_title(); ?><?php if ( $pw_attr ) : ?>（<?php echo preworks_mentor_attr_html( $pw_attr ); ?>）<?php endif; ?><?php if ( $pw_role ) : ?>｜<?php echo esc_html( $pw_role ); ?><?php endif; ?></p>
+      <?php /* キャッチコピー未入力時は上の <h1> が氏名になるため、ここで氏名を繰り返さない。v1.0.16
+               キャッチコピーがある場合の出力は従来と完全に同じ。 */ ?>
+      <p class="sub"><?php
+        if ( $pw_catch ) { the_title(); }
+        if ( $pw_attr ) { echo $pw_catch ? '（' . preworks_mentor_attr_html( $pw_attr ) . '）' : preworks_mentor_attr_html( $pw_attr ); }
+        if ( $pw_role ) { echo ( ( $pw_catch || $pw_attr ) ? '｜' : '' ) . esc_html( $pw_role ); }
+      ?></p>
     <?php endif; ?>
   </div></section>
 
@@ -37,7 +43,11 @@
   </div></section>
 
   <?php
-    $rel = new WP_Query( array( 'post_type' => 'mentor', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'menu_order title', 'order' => 'ASC' ) );
+    /* 下層が未入稿のメンターは「他のメンター」にも出さない。v1.0.16
+       このカードは「詳細はこちら」ボタン付きなので、リンクしないカードを混ぜると
+       一覧・TOPと挙動が食い違う。キャッチコピーが入った時点で自動的に出てくる。 */
+    $rel = new WP_Query( array( 'post_type' => 'mentor', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'menu_order title', 'order' => 'ASC',
+        'meta_query' => array( array( 'key' => '_pw_catch', 'value' => '', 'compare' => '!=' ) ) ) );
     if ( $rel->have_posts() ) : ?>
   <section class="mentors sec-pad"><span class="orb m soft alt" style="top:40px;right:-100px;"></span><div class="wrap">
     <div class="mod-head" style="text-align:center;margin-bottom:28px;"><span class="eyebrow">Mentor</span><h2 class="htitle">preworksのメンター紹介</h2><p class="subhead">現役のオンライン秘書がマンツーマンでサポート！</p></div>
