@@ -1526,3 +1526,14 @@ a.vcard .vph{aspect-ratio:4/3;height:auto;}
 @media (prefers-reduced-motion: reduce){
   .mcard-v:hover,.mcard-v:hover img{transform:none;}
 }
+
+/* =========================================================================
+ * メンターの属性表示（.m-attr）v1.0.14
+ * preworks_mentor_attr_html() が数字を <b class="mnum">、区切りを
+ * <span class="mdiv"> で出力するが、1.0.13 でこのCSSの移植が漏れていた。
+ * 入れないと数字がブラウザ既定の太字になるだけで、テスト環境と見た目が変わる。
+ * ========================================================================= */
+.m-attr .mnum{color:var(--terra);font-weight:800;font-size:1.18em;margin:0 1px;}
+.m-attr .mdiv{color:#d8ccbe;margin:0 7px;font-weight:400;}
+.mcard .m-attr .mnum{font-size:1.08em;margin:0 1px;}
+.mcard .m-attr .mdiv{margin:0 4px;}
