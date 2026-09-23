@@ -7,16 +7,20 @@
   <section class="voice sec-pad"><div class="wrap"><div class="vgrid">
     <?php if ( have_posts() ) : while ( have_posts() ) : the_post(); ?>
       <?php $attr = get_post_meta( get_the_ID(), '_pw_attr', true ); $hl = get_post_meta( get_the_ID(), '_pw_hl', true ); $comment = get_post_meta( get_the_ID(), '_pw_comment', true ); ?>
-      <a class="vcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+      <?php /* 下層（キャッチコピー）が未入稿ならカードをリンクにしない。v1.0.17 */
+        $v_rdy  = preworks_entry_is_ready();
+        $v_tag  = $v_rdy ? 'a' : 'div';
+        $v_atts = $v_rdy ? ' href="' . esc_url( get_permalink() ) . '" style="text-decoration:none;color:inherit;"' : ''; ?>
+      <<?php echo $v_tag; ?> class="vcard vcard-cpt reveal"<?php echo $v_atts; ?>>
         <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'class' => 'vph', 'alt' => get_the_title() ) ); } else { ?><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt=""><?php } ?>
         <div class="vbody">
           <div class="who"><?php the_title(); ?></div>
           <?php if ( $attr ) : ?><span class="v-attr"><?php echo esc_html( $attr ); ?></span><?php endif; ?>
           <?php if ( $hl ) : ?><p class="vhl-q"><?php echo esc_html( $hl ); ?></p><?php endif; ?>
           <?php if ( $comment ) : ?><p class="v-comment"><?php echo esc_html( $comment ); ?></p><?php endif; ?>
-          <span class="v-detail-btn">詳細はこちら<span class="btn-arw">▶</span></span>
+          <?php if ( $v_rdy ) : ?><span class="v-detail-btn">詳細はこちら<span class="btn-arw">▶</span></span><?php endif; ?>
         </div>
-      </a>
+      </<?php echo $v_tag; ?>>
     <?php endwhile; else : ?>
       <p style="grid-column:1/-1;text-align:center;color:var(--muted);">修了生の声はまだありません。管理画面の「修了生の声 → 新規追加」から追加してください。</p>
     <?php endif; ?>

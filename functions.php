@@ -19,7 +19,7 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.15' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.17' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
@@ -589,10 +589,65 @@ add_action( 'pre_get_posts', 'preworks_mentor_archive_order' );
  * ⚠️ 既存4名（戸田・玉木・仲宗根・髙松）は全員 _pw_catch が入っていることを
  *    本番サイトで実測済み。この変更による既存ページの表示差はない。
  */
-function preworks_mentor_is_ready( $post_id = null ) {
+function preworks_entry_is_ready( $post_id = null ) {
     $post_id = $post_id ? $post_id : get_the_ID();
     return ( '' !== trim( (string) get_post_meta( $post_id, '_pw_catch', true ) ) );
 }
+// 1.0.16 で mentor 専用として作った関数。voice でも同じ判定を使うので中身を
+// preworks_entry_is_ready() に移した。呼び出し側はそのままでよい。
+function preworks_mentor_is_ready( $post_id = null ) {
+    return preworks_entry_is_ready( $post_id );
+}
+
+/*
+ * 修了生の声をサイトに出してよい状態か。v1.0.17
+ *
+ * トップの「修了生の声」欄は3枚組。1件だけ公開するとそこが1枚になってしまうため、
+ * 公開が3件そろうまでは従来の固定3枚（大城さん・Yさん・Kさん）のままにする。
+ * 上部メニューとフッターの「修了生の声」も同じ条件で切り替える。
+ * （TOPが従来表示なのにメニューだけ /voice/ を指す、という食い違いを避ける）
+ *
+ * ⚠️ 坂さんの運用は「3名分を下書きで入稿 → 公開」。3件そろうまで反映されないことを
+ *    入稿者が分かるように、管理画面に残り件数を表示する（下の関数）。
+ */
+function preworks_voice_live_min() {
+    return 3;
+}
+function preworks_voice_published() {
+    static $n = null;
+    if ( null !== $n ) return $n;
+    $c = wp_count_posts( 'voice' );
+    $n = ( $c && ! empty( $c->publish ) ) ? (int) $c->publish : 0;
+    return $n;
+}
+function preworks_voice_is_live() {
+    return ( preworks_voice_published() >= preworks_voice_live_min() );
+}
+
+/*
+ * 「修了生の声」の入稿者向けの案内。v1.0.17
+ * あと何件公開すればサイトに反映されるかを、一覧・編集画面の上に出す。
+ */
+function preworks_voice_live_notice() {
+    if ( ! function_exists( 'get_current_screen' ) ) return;
+    $screen = get_current_screen();
+    if ( ! $screen || 'voice' !== $screen->post_type ) return;
+    if ( ! in_array( $screen->base, array( 'post', 'edit' ), true ) ) return;
+    $n   = preworks_voice_published();
+    $min = preworks_voice_live_min();
+    if ( $n >= $min ) {
+        echo '<div class="notice notice-success"><p><strong>修了生の声は公開中です。</strong>'
+           . '公開済み ' . $n . ' 件。トップページと上部メニューに反映されています。</p></div>';
+        return;
+    }
+    $rest = $min - $n;
+    echo '<div class="notice notice-warning"><p><strong>修了生の声は、あと ' . $rest . ' 件公開するとサイトに反映されます。</strong>'
+       . '（公開済み ' . $n . ' 件／必要 ' . $min . ' 件）<br>'
+       . 'トップページの「修了生の声」欄は3枚組です。1件ずつ公開すると欄が1枚だけになってしまうため、'
+       . $min . ' 件そろうまでは従来の表示のままにしています。'
+       . '<strong>3件を下書きで仕上げてから、まとめて公開してください。</strong></p></div>';
+}
+add_action( 'admin_notices', 'preworks_voice_live_notice' );
 
 /*
  * 下層が未入稿のメンター詳細ページは、一覧・TOPのどちらからもリンクしていない
@@ -602,14 +657,19 @@ function preworks_mentor_is_ready( $post_id = null ) {
  * max-image-preview:large と同じ1つの meta タグにまとめるため。
  */
 function preworks_mentor_wp_robots( $robots ) {
-    if ( ! is_singular( 'mentor' ) ) {
+    // 詳細ページ：キャッチコピー未入力（＝下層が未入稿）なら noindex。v1.0.16→1.0.17 で voice も対象。
+    if ( is_singular( array( 'mentor', 'voice' ) ) ) {
+        if ( ! preworks_entry_is_ready( get_queried_object_id() ) ) {
+            $robots['noindex'] = true;
+            $robots['follow']  = true;
+        }
         return $robots;
     }
-    if ( preworks_mentor_is_ready( get_queried_object_id() ) ) {
-        return $robots;
+    // 一覧ページ /voice/：3件そろうまではどこからもリンクしていない孤立ページなので noindex。v1.0.17
+    if ( is_post_type_archive( 'voice' ) && ! preworks_voice_is_live() ) {
+        $robots['noindex'] = true;
+        $robots['follow']  = true;
     }
-    $robots['noindex'] = true;
-    $robots['follow']  = true;
     return $robots;
 }
 add_filter( 'wp_robots', 'preworks_mentor_wp_robots' );

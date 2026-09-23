@@ -1551,3 +1551,18 @@ a.vcard .vph{aspect-ratio:4/3;height:auto;}
  * ========================================================================= */
 .mcard .m-attr{font-size:clamp(14px,1.6vw,15px);word-break:keep-all;overflow-wrap:anywhere;}
 .mcard .m-attr .mdiv{margin:0 3px;}
+
+
+/* =========================================================================
+ * 1.0.17 修了生の声：カスタム投稿カードの写真比率をタグ非依存にする
+ * ⚠️ 1.0.12 で入れた `a.vcard .vph{aspect-ratio:4/3}` は <a> 限定だった。
+ *    下層が未入稿のカードを <div class="vcard"> で出すようにしたため、
+ *    そのままだと同じ並びの中で 4:3 と 1:1 が混ざる。
+ *    カスタム投稿のカードには .vcard-cpt を付けているので、そちらで指定する。
+ *    トップの従来の固定3枚（div.vcard・.vcard-cpt なし）は 1:1 のまま。
+ * ========================================================================= */
+.vcard-cpt .vph{aspect-ratio:4/3;height:auto;}
+
+/* リンクしないカードは浮き上がらせない（押せると誤解させないため） */
+div.vcard-cpt:hover{transform:none;box-shadow:0 12px 30px rgba(150,80,45,.07);}
+div.vcard-cpt:hover .vph{transform:none;}

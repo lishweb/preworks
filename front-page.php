@@ -301,9 +301,10 @@
       <div class="vgrid">
         <?php
           /* 修了生の声（voice）の最新3件を表示する。v1.0.12
-             0件のあいだは、下の else 側にある従来の固定3枚をそのまま表示する
-             （トップの「修了生の声」欄が空になるのを避けるためのフォールバック）。
-             坂さんが3名分を公開した時点で、自動的に上の一覧へ切り替わる。 */
+             公開が3件そろうまでは、下の else 側にある従来の固定3枚をそのまま表示する。
+             ⚠️ 1.0.17 で条件を have_posts() から preworks_voice_is_live() に変えた。
+                1件だけ公開したときにこの3枚組が1枚になってしまうのを防ぐため。
+                残り何件で反映されるかは管理画面に表示している。 */
           $pw_vq = new WP_Query( array(
               'post_type'        => 'voice',
               'posts_per_page'   => 3,
@@ -311,24 +312,30 @@
               'no_found_rows'    => true,
               'ignore_sticky_posts' => true,
           ) );
-          if ( $pw_vq->have_posts() ) :
+          if ( preworks_voice_is_live() && $pw_vq->have_posts() ) :
             while ( $pw_vq->have_posts() ) : $pw_vq->the_post();
               $v_attr = get_post_meta( get_the_ID(), '_pw_attr', true );
               $v_hl   = get_post_meta( get_the_ID(), '_pw_hl', true );
               $v_cm   = get_post_meta( get_the_ID(), '_pw_comment', true );
+              /* 下層（キャッチコピー）が未入稿ならカードをリンクにしない。v1.0.17
+                 写真の比率は a.vcard 限定のCSSだったので、タグに依存しない
+                 .vcard-cpt に付け替えてある（_shared.css 1.0.17）。 */
+              $v_rdy  = preworks_entry_is_ready();
+              $v_tag  = $v_rdy ? 'a' : 'div';
+              $v_atts = $v_rdy ? ' href="' . esc_url( get_permalink() ) . '" style="text-decoration:none;color:inherit;"' : '';
         ?>
-          <a class="vcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+          <<?php echo $v_tag; ?> class="vcard vcard-cpt reveal"<?php echo $v_atts; ?>>
             <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'class' => 'vph', 'alt' => get_the_title() ) ); } else { ?><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt=""><?php } ?>
             <div class="vbody">
               <div class="who"><?php the_title(); ?></div>
               <?php if ( $v_attr ) : ?><span class="v-attr"><?php echo esc_html( $v_attr ); ?></span><?php endif; ?>
               <?php if ( $v_hl ) : ?><p class="vhl-q"><?php echo esc_html( $v_hl ); ?></p><?php endif; ?>
               <?php if ( $v_cm ) : ?><p class="v-comment"><?php echo esc_html( $v_cm ); ?></p><?php endif; ?>
-              <span class="v-detail-btn">詳細はこちら<span class="btn-arw">▶</span></span>
+              <?php if ( $v_rdy ) : ?><span class="v-detail-btn">詳細はこちら<span class="btn-arw">▶</span></span><?php endif; ?>
             </div>
-          </a>
+          </<?php echo $v_tag; ?>>
         <?php endwhile; wp_reset_postdata(); else : ?>
-        <?php /* ===== 0件のときのフォールバック：従来の固定3枚 ===== */ ?>
+        <?php /* ===== 3件そろっていないときのフォールバック：従来の固定3枚 ===== */ ?>
           <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt="大城さん"><div class="vbody"><div class="who">大城さん<small>30代・2児ママ（6歳・0歳）｜前職：コールセンター業務</small></div><p>新しいことを学ぶ毎日が新鮮でした。初めは事務経験がほぼゼロで不安でしたが、メンターさんの支えのおかげで、最後までやり切れました！</p><a class="vlink" href="https://youtu.be/EhX5RDQ5Jfk" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
           <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-2.jpg" alt="Yさん"><div class="vbody"><div class="who">Yさん<small>50代・1児ママ（19歳）｜前職：営業事務</small></div><p>事務経験はありましたが、自分が必要だと思っていた知識が狭かったと痛感しました。現役のオンライン秘書に相談できるため信頼して学べる環境でした！</p><a class="vlink" href="https://youtu.be/91_5nU7nGL8" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>
           <div class="vcard reveal"><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-3.jpg" alt="Kさん"><div class="vbody"><div class="who">Kさん<small>40代・2児ママ（6歳・1歳）｜前職：専業主婦</small></div><p>受講後はURAKATA以外でも業務委託の契約につながり、学んだことを実務でも活かせています。失敗しても次の改善策を自分で考えられるようになり、自信につながりました！</p><a class="vlink" href="https://youtu.be/F8_b3OvXHj4" target="_blank" rel="noopener"><span class="vplay">▶</span>修了生の動画をみる</a></div></div>

@@ -31,14 +31,18 @@
   </div></section>
 
   <?php
-    $rel = new WP_Query( array( 'post_type' => 'voice', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'rand' ) );
+    /* 下層が未入稿の記事は「他の修了生」にも出さない。v1.0.17
+       このカードは「詳細はこちら」ボタン付きなので、リンクしないカードを混ぜると
+       トップ・一覧と挙動が食い違う。キャッチコピーが入った時点で自動的に出てくる。 */
+    $rel = new WP_Query( array( 'post_type' => 'voice', 'posts_per_page' => 3, 'post__not_in' => array( get_the_ID() ), 'orderby' => 'rand',
+        'meta_query' => array( array( 'key' => '_pw_catch', 'value' => '', 'compare' => '!=' ) ) ) );
     if ( $rel->have_posts() ) : ?>
   <section class="voice sec-pad"><div class="wrap">
     <div class="mod-head" style="text-align:center;margin-bottom:28px;"><span class="eyebrow">Other Interview</span><h2 class="htitle">他の修了生のインタビュー</h2></div>
     <div class="vgrid">
       <?php while ( $rel->have_posts() ) : $rel->the_post(); ?>
         <?php $r_attr = get_post_meta( get_the_ID(), '_pw_attr', true ); $r_hl = get_post_meta( get_the_ID(), '_pw_hl', true ); $r_cm = get_post_meta( get_the_ID(), '_pw_comment', true ); ?>
-        <a class="vcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+        <a class="vcard vcard-cpt reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
           <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'class' => 'vph', 'alt' => get_the_title() ) ); } else { ?><img class="vph" src="<?php echo PREWORKS_IMG; ?>/voice-1.jpg" alt=""><?php } ?>
           <div class="vbody">
             <div class="who"><?php the_title(); ?></div>

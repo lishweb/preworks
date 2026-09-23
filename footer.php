@@ -13,9 +13,10 @@
           // 修了生の声は専用ページ（/voice/）を持つ。ただしLPは離脱を防ぐためページ内アンカーのまま。v1.0.12
           $preworks_voice_url = get_post_type_archive_link( 'voice' );
           if ( ! $preworks_voice_url ) { $preworks_voice_url = home_url( '/voice/' ); }
-          $preworks_voice_href = ( ! preworks_is_lp() && preworks_has_cpt_posts( 'voice' ) )
-        ? $preworks_voice_url                      // 記事あり → 専用ページ
-        : $preworks_nav_base . '#voice';            // 0件・LP → 従来のアンカー
+          // 1.0.17：header.php と同じ条件（3件そろうまでは従来のアンカー）
+          $preworks_voice_href = ( ! preworks_is_lp() && preworks_voice_is_live() )
+        ? $preworks_voice_url                      // 3件そろった → 専用ページ
+        : $preworks_nav_base . '#voice';            // 3件未満・LP → 従来のアンカー
         // メンター紹介も専用ページ（/mentor/）を持つ。LPは離脱を防ぐためアンカーのまま。v1.0.13
         $preworks_mentor_url = get_post_type_archive_link( 'mentor' );
         if ( ! $preworks_mentor_url ) { $preworks_mentor_url = home_url( '/mentor/' ); }
