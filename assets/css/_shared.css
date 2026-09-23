@@ -1537,3 +1537,17 @@ a.vcard .vph{aspect-ratio:4/3;height:auto;}
 .m-attr .mdiv{color:#d8ccbe;margin:0 7px;font-weight:400;}
 .mcard .m-attr .mnum{font-size:1.08em;margin:0 1px;}
 .mcard .m-attr .mdiv{margin:0 4px;}
+
+/* =========================================================================
+ * メンターカードの属性を1行に収める v1.0.15
+ * 実測（1440px・Zen Kaku Gothic New）での余白：
+ *   戸田 +2px / 仲宗根 +2px / 髙松 +4px / 玉木 -14px ← 玉木だけ2行に折り返していた
+ * 16px では全員が余裕2〜4pxしかなく、1文字増えるだけで崩れる状態だった。
+ * 上限を15pxにし、区切りの余白を4px→3pxに詰めて、4名すべて1行に収める。
+ *   修正後：戸田 +24px / 仲宗根 +23px / 髙松 +25px / 玉木 +9px（全員1行）
+ * 下限14pxは変えないのでスマホの見た目は変わらない。
+ * keep-all は「3児ママ」のような語が途中で割れるのを防ぐ（狭い幅で2行になる場合の割れ方の改善）。
+ * .mprofile .m-attr（詳細ページ上部）は対象外。
+ * ========================================================================= */
+.mcard .m-attr{font-size:clamp(14px,1.6vw,15px);word-break:keep-all;overflow-wrap:anywhere;}
+.mcard .m-attr .mdiv{margin:0 3px;}
