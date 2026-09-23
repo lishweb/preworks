@@ -19,12 +19,12 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.17' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.19' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
     // メインJS
-    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.15', true );
+    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.19', true );
 }
 add_action( 'wp_enqueue_scripts', 'preworks_assets' );
 
@@ -906,13 +906,11 @@ add_filter( 'document_title_parts', function( $parts ) {
     return $parts;
 } );
 
-// トップページの meta description（本番はSEOプラグイン未導入のためテーマ側で出力）
-function preworks_front_meta_description() {
-    if ( is_front_page() ) {
-        echo '<meta name="description" content="オンライン秘書講座「preworks」は、未経験から最短2ヵ月で在宅ワークデビューを目指せる実践型講座です。現役オンライン秘書の1on1サポートや実践課題を通して、仕事に必要なスキルを習得。受講中から実務経験を積める機会も用意しています。">' . "\n";
-    }
-}
-add_action( 'wp_head', 'preworks_front_meta_description', 1 );
+/* ⚠️ 1.0.19 で preworks_front_meta_description() を削除した。
+ * テスト環境から移植した preworks_output_meta_description() が
+ * トップページも含めて meta description を出すため、残すと
+ * <meta name="description"> が2つ出力される。
+ * トップページの文言は preworks_output_meta_description() 内に同じものが入っている。 */
 
 // ===== 広告用LP（lp001=Google検索広告 / lp002=Google P-MAX広告） =====
 // LP判定
@@ -1465,3 +1463,610 @@ function preworks_notify_settings_page() {
     </div>
     <?php
 }
+
+
+/* =========================================================================
+ * ここから下は No.7「ブログ記事機能」をテスト環境(1.3.54)から移植したもの。v1.0.19
+ * 坂さん依頼（9/24）「①ブログ記事機能を本番Wordpressに実装」
+ *
+ * 移植したもの
+ *   かんたんブログ入力（メタボックス・保存）／本文レンダラ／リード文／もくじ／
+ *   表（テーブル）／記事内CTAショートコード [line_cta]／カテゴリ初期化／
+ *   パーマリンク移行と旧ID URLの301転送／エディタ設定とブロックパターン／
+ *   meta description（かんたん入力欄から自動生成・SEOプラグインがあれば譲る）／
+ *   カタカナ語の折り返し保護（坂さん指摘 9/24 の改行修正）
+ *
+ * ⚠️ 意図的に移植しなかったもの
+ *   preworks_is_ad_lp() と、それを使う wp_head/wp_footer の匿名フック。
+ *   本番には preworks_is_lp() / preworks_lp_noindex() / preworks_lp_tracking_script()
+ *   が既にあり、移植すると LP に noindex と計測スクリプトが二重に出る。
+ * ========================================================================= */
+
+/*
+ * 既に有効化済みのサイト向けの一度だけの移行。
+ * after_switch_theme はテーマ切り替え時しか走らないため、
+ * テーマを差し替えただけでは上の関数が実行されない。
+ * 旧設定（/%post_id%/）のときだけ書き換え、以後は二度と触らない
+ *  → 将来だれかが意図的に別の形式へ変えても上書きしない。
+ */
+function preworks_migrate_permalink() {
+    if ( get_option( 'preworks_permalink_rev' ) === '1348' ) return;
+    if ( get_option( 'permalink_structure' ) === '/%post_id%/' ) {
+        update_option( 'permalink_structure', '/%postname%/' );
+        global $wp_rewrite; $wp_rewrite->init(); $wp_rewrite->flush_rules();
+    }
+    update_option( 'preworks_permalink_rev', '1348' );
+}
+add_action( 'admin_init', 'preworks_migrate_permalink' );
+
+/*
+ * 旧URL（/89/ のような記事ID形式）を新URLへ 301 リダイレクト。
+ * /%postname%/ では「89」というスラッグの記事を探して404になるため、
+ * 404のときだけ数字のみのパスを記事IDとして解決し直す。
+ */
+function preworks_redirect_legacy_id_url() {
+    if ( ! is_404() || is_admin() ) return;
+    if ( empty( $_SERVER['REQUEST_URI'] ) ) return;
+    $path = trim( (string) parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ), '/' );
+    // サブディレクトリ運用（/preworks/89/）に対応するためサイトのパスを取り除く。
+    // 末尾セグメントだけを見る実装にすると /voice/1/ や /blog/page/2/ まで
+    // 数字と誤判定するため、必ず「サイト直下の全体が数字」であることを条件にする。
+    $home = trim( (string) parse_url( home_url( '/' ), PHP_URL_PATH ), '/' );
+    if ( '' !== $home ) {
+        if ( 0 === strpos( $path, $home . '/' ) ) { $path = substr( $path, strlen( $home ) + 1 ); }
+        elseif ( $path === $home )                { $path = ''; }
+    }
+    $path = trim( $path, '/' );
+    if ( '' === $path || ! preg_match( '/^[0-9]+$/', $path ) ) return;
+    $post = get_post( (int) $path );
+    if ( ! $post || 'post' !== $post->post_type || 'publish' !== $post->post_status ) return;
+    $url = get_permalink( $post );
+    if ( ! $url ) return;
+    wp_safe_redirect( $url, 301 );
+    exit;
+}
+add_action( 'template_redirect', 'preworks_redirect_legacy_id_url' );
+
+// No.7 ブログ: 固定カテゴリー3種を自動作成（未作成の場合のみ。記事0でもタブに表示するため）
+function preworks_setup_blog_categories() {
+    $cats = array(
+        'オンライン秘書' => 'online-hisyo',
+        '在宅ワーク'     => 'zaitaku-work',
+        '修了生の声'     => 'voice-blog',
+    );
+    foreach ( $cats as $name => $slug ) {
+        if ( ! term_exists( $name, 'category' ) ) {
+            wp_insert_term( $name, 'category', array( 'slug' => $slug ) );
+        }
+    }
+}
+add_action( 'after_switch_theme', 'preworks_setup_blog_categories' );
+
+/* ===== No.7 ブログ記事: 自動もくじ（見出しから生成）＋見出しアンカー ===== */
+function preworks_content_toc( $content ) {
+    if ( ! is_singular( 'post' ) || ! is_main_query() || ! in_the_loop() ) return $content;
+    $toc_items = array();
+    $counter   = 0;
+    $content = preg_replace_callback(
+        '/<h([23])((?:[^>]*))>(.*?)<\/h\1>/is',
+        function ( $mm ) use ( &$toc_items, &$counter ) {
+            $level = $mm[1];
+            $attrs = $mm[2];
+            $inner = $mm[3];
+            $text  = trim( wp_strip_all_tags( $inner ) );
+            if ( $text === '' ) return $mm[0];
+            $counter++;
+            $id = 'sec-' . $counter;
+            if ( preg_match( '/id=["\']([^"\']+)["\']/', $attrs, $idm ) ) {
+                $id        = $idm[1];
+                $attrs_out = $attrs;
+            } else {
+                $attrs_out = $attrs . ' id="' . $id . '"';
+            }
+            $toc_items[] = array( 'level' => $level, 'id' => $id, 'text' => $text );
+            return '<h' . $level . $attrs_out . '>' . $inner . '</h' . $level . '>';
+        },
+        $content
+    );
+    if ( count( $toc_items ) < 2 ) return $content;
+    $li = '';
+    foreach ( $toc_items as $it ) {
+        $li .= '<li class="toc-l' . $it['level'] . '"><a href="#' . esc_attr( $it['id'] ) . '">' . esc_html( $it['text'] ) . '</a></li>';
+    }
+    $box = preworks_toc_box( $li, count( $toc_items ) );
+    return $box . $content;
+}
+add_filter( 'the_content', 'preworks_content_toc', 20 );
+
+/*
+ * カタカナ語の途中割れを防ぐ。v1.3.53
+ * 坂さん指摘（9/24）「共通デザイ|ンの確認用」「すべてダ|ミーです」への対応。
+ *
+ * ⚠️ このテーマは h1〜h4 と .lead に word-break:auto-phrase（文節単位の折り返し）を
+ *    使っているが Chrome 系だけの機能。iOS Safari では効かず文字単位に折り返すため、
+ *    カタカナの連続を <span class="nobr"> で囲んで折り返しを禁止する。
+ *
+ * ⚠️ 13文字以上のカタカナ語は対象外。nowrap にすると狭い幅であふれるため。
+ * ⚠️ 表のセルには適用しない。セルが広がって横スクロール量が増えるうえ、
+ *    坂さんが「テーブルは問題ない」と明言しているため。
+ *    適用先は preworks_render_blog_body() の $inline と preworks_render_lead() だけ。
+ * ⚠️ 引数は preworks_inline_deco() を通した HTML なので、タグの内側は書き換えない
+ *    （リンクのURLにカタカナが入っていても壊さない）。
+ */
+function preworks_kana_nobr( $html ) {
+    $parts = preg_split( '/(<[^>]*>)/u', (string) $html, -1, PREG_SPLIT_DELIM_CAPTURE );
+    if ( ! $parts ) return $html;
+    $out = '';
+    foreach ( $parts as $p ) {
+        if ( '' === $p ) continue;
+        if ( '<' === $p[0] ) { $out .= $p; continue; }
+        // 前後がカタカナでないことを条件にする。これが無いと {2,12} が貪欲に働き、
+        // 15文字の語が「12文字＋3文字」の2つに分割されて上限の意味が無くなる。
+        // この形なら13文字以上の語はどこにも一致せず、まったく包まれない。
+        $out .= preg_replace(
+            '/(?<![\x{30A1}-\x{30FA}\x{30FC}])([\x{30A1}-\x{30FA}\x{30FC}]{2,12})(?![\x{30A1}-\x{30FA}\x{30FC}])/u',
+            '<span class="nobr">$1</span>', $p );
+    }
+    return $out;
+}
+// 装飾＋カタカナ保護。本文・リード文の出力はこれを通す
+function preworks_deco_nobr( $s ) {
+    return preworks_kana_nobr( preworks_inline_deco( $s ) );
+}
+
+function preworks_render_lead( $text ) {
+    $paras = preg_split( '/(?:\r\n|\r|\n){2,}/', trim( (string) $text ) );
+    $out   = '';
+    foreach ( $paras as $p ) {
+        $lines = array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $p ) ), function ( $l ) { return $l !== ''; } );
+        if ( ! $lines ) continue;
+        $out .= '<p>' . implode( '<br>', array_map( 'preworks_deco_nobr', $lines ) ) . '</p>';
+    }
+    return $out;
+}
+
+// もくじの外枠（項目が多いときは開閉式。JSが動かない環境では開いたまま表示される）
+function preworks_toc_box( $li, $count ) {
+    $collapsible = $count > 6 ? ' data-collapsible="1"' : '';
+    $btn = $count > 6
+        ? '<div class="toc-more" hidden><button type="button" class="toc-toggle" aria-expanded="false" aria-label="もくじをすべて見る"><span class="toc-toggle-t">開く</span><span class="toc-toggle-i" aria-hidden="true"></span></button></div>'
+        : '';
+    return '<nav class="post-toc" aria-label="もくじ"' . $collapsible . '><p class="toc-h">もくじ</p>'
+         . '<div class="toc-body"><ol class="toc-list">' . $li . '</ol></div>' . $btn . '</nav>';
+}
+
+/* ===== No.7 ブログ記事: 記事内CTA ショートコード [line_cta] ===== */
+function preworks_line_cta_shortcode( $atts ) {
+    $a = shortcode_atts( array(
+        'lead' => '未経験から、最短2ヵ月でオンライン秘書デビュー。',
+        'text' => 'LINEで無料オンライン相談をする',
+    ), $atts, 'line_cta' );
+    $url = function_exists( 'preworks_line_url' ) ? preworks_line_url() : home_url( '/' );
+    $img = defined( 'PREWORKS_IMG' ) ? PREWORKS_IMG : '';
+    ob_start(); ?>
+    <div class="post-cta">
+      <p class="post-cta-lead"><?php echo esc_html( $a['lead'] ); ?></p>
+      <a class="btn btn-line" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><img src="<?php echo esc_url( $img . '/LINE_Brand_icon.png' ); ?>" alt="LINE" class="liico"><?php echo esc_html( $a['text'] ); ?></a>
+    </div>
+    <?php return ob_get_clean();
+}
+add_shortcode( 'line_cta', 'preworks_line_cta_shortcode' );
+
+/* ===== No.7 ブログ記事: 初心者向け入稿支援（編集画面スタイル＋ワンクリックのパターン） ===== */
+// 編集画面(ブロックエディタ)に見た目を反映
+function preworks_editor_styles() {
+    add_theme_support( 'editor-styles' );
+    add_editor_style( 'assets/css/editor.css' );
+}
+add_action( 'after_setup_theme', 'preworks_editor_styles' );
+
+// ＋ボタン →「パターン」→ preworks から、囲みボックスやCTAをワンクリック挿入
+function preworks_register_patterns() {
+    if ( ! function_exists( 'register_block_pattern' ) ) return;
+    if ( function_exists( 'register_block_pattern_category' ) ) {
+        register_block_pattern_category( 'preworks', array( 'label' => 'preworks（ブログ用）' ) );
+    }
+    register_block_pattern( 'preworks/lead', array(
+        'title'       => 'preworks｜リード文（導入）',
+        'description' => '記事冒頭の要約。クリーム色の帯',
+        'categories'  => array( 'preworks' ),
+        'content'     => '<!-- wp:paragraph {"className":"lead"} --><p class="lead">記事の冒頭で、この記事の要点を2〜3行でまとめます。</p><!-- /wp:paragraph -->',
+    ) );
+    register_block_pattern( 'preworks/point-box', array(
+        'title'       => 'preworks｜ポイントボックス',
+        'description' => '重要な補足を囲むボックス（テラコッタ）',
+        'categories'  => array( 'preworks' ),
+        'content'     => '<!-- wp:group {"className":"point"} --><div class="wp-block-group point"><!-- wp:paragraph --><p><strong>ポイント</strong><br>ここに伝えたい内容を書きます。</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
+    ) );
+    register_block_pattern( 'preworks/note-box', array(
+        'title'       => 'preworks｜注意・お知らせボックス',
+        'description' => '注意事項やお知らせのボックス（イエロー）',
+        'categories'  => array( 'preworks' ),
+        'content'     => '<!-- wp:group {"className":"note"} --><div class="wp-block-group note"><!-- wp:paragraph --><p><strong>補足</strong><br>注意事項やお知らせをここに。</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
+    ) );
+    register_block_pattern( 'preworks/line-cta', array(
+        'title'       => 'preworks｜LINE相談CTAボタン',
+        'description' => '記事の途中や末尾に置くLINE無料相談ボタン',
+        'categories'  => array( 'preworks' ),
+        'content'     => '<!-- wp:shortcode -->[line_cta]<!-- /wp:shortcode -->',
+    ) );
+}
+add_action( 'init', 'preworks_register_patterns' );
+
+/* =========================================================================
+ * ブログ本文のテーブル（表） v1.3.48 — aun#5
+ * ------------------------------------------------------------------------
+ * 入稿はパイプ「|」区切りの1行1行。記事ごとの個別装飾は不要で、
+ * サイト共通のデザイン（罫線・背景色・余白）が自動で当たる。
+ *
+ *   |項目|preworks|他社A|
+ *   |---|---|---|
+ *   |受講期間|最短2ヵ月|6ヵ月|
+ *
+ * ・2行目の |---| が見出し行の合図。これがあると1行目が <thead><th scope="col">
+ * ・左上を空にすると、左端の列が行見出し <th scope="row"> になる（比較表向け）
+ * ・|:---:| で中央寄せ、|---:| で右寄せ
+ * ・スマホは .table-scroll が横スクロールするので崩れない
+ * ========================================================================= */
+function preworks_table_cells( $line ) {
+    $line = trim( (string) $line );
+    // 全角の「｜」でも入力できるようにする（日本語入力のまま打つと全角になるため）
+    $line = preg_replace( '/^[|｜]/u', '', $line );
+    $line = preg_replace( '/[|｜]$/u', '', $line );
+    return array_map( 'trim', preg_split( '/[|｜]/u', $line ) );
+}
+function preworks_table_is_sep( $cells ) {
+    if ( ! $cells ) return false;
+    foreach ( $cells as $c ) {
+        if ( ! preg_match( '/^:?-{2,}:?$/', $c ) ) return false;
+    }
+    return true;
+}
+function preworks_table_align( $cells ) {
+    $a = array();
+    foreach ( $cells as $c ) {
+        $l = ( ':' === substr( $c, 0, 1 ) );
+        $r = ( ':' === substr( $c, -1 ) );
+        $a[] = ( $l && $r ) ? 'center' : ( $r ? 'right' : '' );
+    }
+    return $a;
+}
+function preworks_render_table( $lines, $caption = '' ) {
+    if ( ! $lines ) return '';
+    $caption = trim( (string) $caption );
+    $grid = array(); $align = array(); $head = null;
+    foreach ( array_values( $lines ) as $i => $line ) {
+        $cells = preworks_table_cells( $line );
+        if ( 1 === $i && preworks_table_is_sep( $cells ) ) {
+            $align = preworks_table_align( $cells );
+            $head  = $grid ? array_shift( $grid ) : null;
+            continue;
+        }
+        $grid[] = $cells;
+    }
+    $cols = $head ? count( $head ) : 0;
+    foreach ( $grid as $r ) { $cols = max( $cols, count( $r ) ); }
+    if ( $cols < 1 ) return '';
+    // 見出し行の左上が空 ＝ 左端の列を行見出しとして扱う
+    $rowhead = ( is_array( $head ) && isset( $head[0] ) && '' === $head[0] );
+    $sty = function ( $i ) use ( $align ) {
+        return ( ! empty( $align[ $i ] ) ) ? ' style="text-align:' . $align[ $i ] . '"' : '';
+    };
+    $html = '<table>';
+    // <caption> ＝ 表の表題。「この表が何の表か」を伝える正しいHTML要素。
+    // 読み上げソフトと検索エンジンは、表に入る前にここを読む。
+    if ( '' !== $caption ) {
+        $html .= '<caption>' . preworks_inline_deco( $caption ) . '</caption>';
+    }
+    if ( is_array( $head ) ) {
+        $html .= '<thead><tr>';
+        for ( $i = 0; $i < $cols; $i++ ) {
+            $v = isset( $head[ $i ] ) ? $head[ $i ] : '';
+            // 行見出し表の左上は空セル。th ではなく td にする（HTMLの慣例）
+            $html .= ( 0 === $i && $rowhead )
+                ? '<td class="tbl-corner"></td>'
+                : '<th scope="col"' . $sty( $i ) . '>' . preworks_inline_deco( $v ) . '</th>';
+        }
+        $html .= '</tr></thead>';
+    }
+    $html .= '<tbody>';
+    foreach ( $grid as $r ) {
+        $html .= '<tr>';
+        for ( $i = 0; $i < $cols; $i++ ) {
+            $v = preworks_inline_deco( isset( $r[ $i ] ) ? $r[ $i ] : '' );
+            $html .= ( 0 === $i && $rowhead )
+                ? '<th scope="row"' . $sty( $i ) . '>' . $v . '</th>'
+                : '<td' . $sty( $i ) . '>' . $v . '</td>';
+        }
+        $html .= '</tr>';
+    }
+    $html .= '</tbody></table>';
+    // 横スクロールする領域には role="region" と名前を付ける。
+    // キーボードだけの利用者が Tab で領域に入り矢印キーでスクロールできるよう tabindex="0"。
+    $label = ( '' !== $caption ) ? $caption : '表';
+    return '<figure class="post-table">'
+         . '<div class="table-scroll" tabindex="0" role="region" aria-label="' . esc_attr( $label ) . '">' . $html . '</div>'
+         . '<p class="table-hint" hidden>← 横にスワイプできます →</p>'
+         . '</figure>';
+}
+
+function preworks_render_blog_body( $text ) {
+    $lines = preg_split( '/\r\n|\r|\n/', (string) $text );
+    $out = '';
+    $toc = array();
+    $counter = 0;
+    $para = array();
+    $list = array();
+    $listType = '';
+    $table = array();
+    // 本文・見出し・リスト・ポイント・注意・引用に装飾＋カタカナ保護をかける。v1.3.53
+    // 表のセル・Q&A吹き出し・図キャプションは対象外（preworks_inline_deco を直接呼んでいる）
+    $inline = function ( $s ) { return preworks_deco_nobr( $s ); };
+    $flushPara = function () use ( &$para, &$out ) {
+        if ( $para ) { $out .= '<p>' . implode( '<br>', $para ) . '</p>'; $para = array(); }
+    };
+    $tblcap = '';
+    $flushTable = function () use ( &$table, &$tblcap, &$out ) {
+        if ( $table ) { $out .= preworks_render_table( $table, $tblcap ); $table = array(); }
+        $tblcap = '';
+    };
+    $flushList = function () use ( &$list, &$listType, &$out ) {
+        if ( $list ) {
+            $out .= '<' . $listType . '>';
+            foreach ( $list as $li ) { $out .= '<li>' . $li . '</li>'; }
+            $out .= '</' . $listType . '>';
+            $list = array(); $listType = '';
+        }
+    };
+    foreach ( $lines as $raw ) {
+        $t = trim( $raw );
+        // 表（|で始まり|で終わる行）。連続する行をまとめて1つの表にする
+        if ( $t !== '' && preg_match( '/^[|｜].*[|｜]$/u', $t ) ) { $flushList(); $flushPara(); $table[] = $t; continue; }
+        if ( $table ) { $flushTable(); }
+        // [表:タイトル] ＝ 直後の表の表題（<caption>）。表の直前の行に単独で書く
+        if ( preg_match( '/^\[表[:：]\s*(.+?)\s*\]$/u', $t, $m ) ) { $flushList(); $flushPara(); $tblcap = $m[1]; continue; }
+        // 表題を書いたのに表が続かなかった場合は捨てる（間の空行はまたぐ）
+        if ( $t !== '' ) { $tblcap = ''; }
+        if ( $t === '' ) { $flushList(); $flushPara(); continue; }
+        if ( mb_substr( $t, 0, 1 ) === '■' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 2, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h2 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h2>'; continue; }
+        if ( mb_substr( $t, 0, 1 ) === '□' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 3, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h3 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h3>'; continue; }
+        if ( preg_match( '/^【ポイント】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="point">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
+        if ( preg_match( '/^【注意】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="note">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
+        if ( preg_match( '/^\[LINE\]$/ui', $t ) ) { $flushList(); $flushPara(); $out .= do_shortcode( '[line_cta]' ); continue; }
+        if ( mb_substr( $t, 0, 1 ) === '>' || mb_substr( $t, 0, 1 ) === '＞' ) { $flushList(); $flushPara(); $out .= '<blockquote><p>' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</p></blockquote>'; continue; }
+        // [画像:URL] / [画像:URL|代替テキスト] / [画像:URL|代替テキスト|キャプション]
+        if ( preg_match( '/^\[画像[:：]\s*([^\s|｜\]]+)\s*(?:[|｜]\s*([^|｜\]]*?)\s*)?(?:[|｜]\s*([^|｜\]]*?)\s*)?\]$/u', $t, $m ) ) {
+            $flushList(); $flushPara();
+            $alt = isset( $m[2] ) ? trim( $m[2] ) : '';
+            $cap = isset( $m[3] ) ? trim( $m[3] ) : '';
+            $img = '<img src="' . esc_url( $m[1] ) . '" alt="' . esc_attr( $alt ) . '" loading="lazy" decoding="async">';
+            $out .= $cap !== ''
+                ? '<figure class="post-fig">' . $img . '<figcaption>' . preworks_inline_deco( $cap ) . '</figcaption></figure>'
+                : '<figure class="post-fig">' . $img . '</figure>';
+            continue;
+        }
+        if ( preg_match( '/^[・･]\s*(.*)$/u', $t, $m ) ) { $flushPara(); if ( $listType !== 'ul' ) { $flushList(); $listType = 'ul'; } $list[] = $inline( trim( $m[1] ) ); continue; }
+        if ( preg_match( '/^\d+[\.\)、．]\s*(.*)$/u', $t, $m ) ) { $flushPara(); if ( $listType !== 'ol' ) { $flushList(); $listType = 'ol'; } $list[] = $inline( trim( $m[1] ) ); continue; }
+        $flushList();
+        $para[] = $inline( $t );
+    }
+    $flushTable(); $flushList(); $flushPara();
+    $tochtml = '';
+    if ( count( $toc ) >= 2 ) {
+        $li = '';
+        foreach ( $toc as $it ) { $li .= '<li class="toc-l' . $it[0] . '"><a href="#' . esc_attr( $it[1] ) . '">' . esc_html( $it[2] ) . '</a></li>'; }
+        $tochtml = preworks_toc_box( $li, count( $toc ) );
+    }
+    return $tochtml . $out;
+}
+
+// 投稿(post)に「かんたんブログ入力」欄を追加
+function preworks_blog_metabox() {
+    add_meta_box( 'preworks_blog_fields', 'かんたんブログ入力（記号で書くだけ・もくじ自動）', 'preworks_blog_metabox_html', 'post', 'normal', 'high' );
+}
+add_action( 'add_meta_boxes', 'preworks_blog_metabox' );
+function preworks_blog_metabox_html( $post ) {
+    wp_nonce_field( 'preworks_blog_save', 'preworks_blog_nonce' );
+    $lead = get_post_meta( $post->ID, '_pw_bloglead', true );
+    $body = get_post_meta( $post->ID, '_pw_blogbody', true );
+    $s = 'style="width:100%;max-width:760px"';
+    $ph = "■最初の見出し\nここに文章を書きます。==重要な部分==はマーカー、**ここ**は太字になります。\n\n□小さめの見出し\n・箇条書き1\n・箇条書き2\n\n1. 番号つき手順1\n2. 番号つき手順2\n\n【ポイント】伝えたい要点をこの枠で目立たせます。\n\n[表:preworksと他社のサポート内容の比較]\n|項目|preworks|他社A|\n|---|---|---|\n|受講期間|最短2ヵ月|6ヵ月|\n|サポート|1on1の面談あり|チャットのみ|\n\n[LINE]\n\n■まとめ\n最後のメッセージ。";
+    echo '<style>.pwb label{display:block;margin:14px 0 4px;font-weight:600}.pwb .hint{color:#888;font-size:12px;font-weight:400}</style>';
+    echo '<div class="pwb">';
+    echo preworks_slug_warning_box( $post->ID );
+    echo '<div style="background:#fff8ef;border:1px solid #f0e2cf;padding:12px 14px;border-radius:6px;font-size:13px;line-height:1.8;">';
+    echo '<b>この欄に書くだけで記事が完成します（下のブロックエディタは使わなくてOK）。</b><br>';
+    echo 'タイトル＝画面上の「タイトルを追加」／アイキャッチ画像＝記事のサムネイル／カテゴリ＝右側で選択<br>';
+    echo '<b>書き方（行の先頭に記号）：</b><br>';
+    echo '■ 大見出し　／　□ 小見出し　／　・ 箇条書き　／　1. 番号リスト　／　＞ 引用<br>';
+    echo '【ポイント】文章 → オレンジ枠　／　【注意】文章 → 黄色枠　／　[LINE] → LINE相談ボタン<br>';
+    echo '**文字** → 太字　／　__文字__ → 下線　／　==文字== → 黄色マーカー　／　[表示文字](URL) → リンク<br>';
+    echo '<b>画像：</b>[画像:URL] ／ [画像:URL|代替テキスト] ／ [画像:URL|代替テキスト|キャプション]<br>';
+    echo '　└ URLは【メディア】→ 画像を選択 →「ファイルのURL」をコピーして貼り付けます。1行に単独で書いてください。<br>';
+    echo '<b>表：</b>行の前後を「|」で囲み、セルの区切りも「|」。2行目に <code>|---|---|</code> を入れると1行目が見出し行になります。<br>';
+    echo '　└ 例）<code>|項目|preworks|他社A|</code> → <code>|---|---|---|</code> → <code>|受講期間|最短2ヵ月|6ヵ月|</code><br>';
+    echo '　└ 左上を空（<code>||preworks|他社A|</code>）にすると、左端の列も見出しになります（比較表向け）。<br>';
+    echo '　└ 表のすぐ上の行に <code>[表:○○の比較]</code> と書くと、表の表題になります（SEO・読み上げ対応のため推奨）。<br>';
+    echo '　└ <code>|:---:|</code> で中央寄せ、<code>|---:|</code> で右寄せ。スマホは自動で横スクロールします。<br>';
+    echo '段落は空行で区切る。<b>もくじは見出しから自動で作られます。</b>';
+    echo '</div>';
+    echo '<label>リード文（導入・任意） <span class="hint">記事冒頭の要約。クリーム色の帯で表示。空行で段落、**太字** などの装飾も使えます</span></label>';
+    echo '<textarea name="pw_bloglead" rows="4" ' . $s . '>' . esc_textarea( $lead ) . '</textarea>';
+    echo '<label>本文</label>';
+    echo '<textarea name="pw_blogbody" rows="20" ' . $s . ' placeholder="' . esc_attr( $ph ) . '">' . esc_textarea( $body ) . '</textarea>';
+    echo '</div>';
+}
+function preworks_blog_save( $post_id ) {
+    if ( ! isset( $_POST['preworks_blog_nonce'] ) || ! wp_verify_nonce( $_POST['preworks_blog_nonce'], 'preworks_blog_save' ) ) return;
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+    if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+    if ( isset( $_POST['pw_bloglead'] ) ) update_post_meta( $post_id, '_pw_bloglead', sanitize_textarea_field( wp_unslash( $_POST['pw_bloglead'] ) ) );
+    if ( isset( $_POST['pw_blogbody'] ) ) update_post_meta( $post_id, '_pw_blogbody', sanitize_textarea_field( wp_unslash( $_POST['pw_blogbody'] ) ) );
+}
+add_action( 'save_post_post', 'preworks_blog_save' );
+
+function preworks_seo_plugin_active() {
+    return defined( 'AIOSEO_VERSION' ) || function_exists( 'aioseo' )
+        || defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' )
+        || defined( 'SSP_VERSION' ) || defined( 'SEOPRESS_VERSION' );
+}
+
+// ① テーマのOGPを無効化（wp_head priority 5 で登録済み）
+function preworks_disable_theme_ogp() {
+    if ( preworks_seo_plugin_active() ) {
+        remove_action( 'wp_head', 'preworks_ogp', 5 );
+    }
+}
+add_action( 'wp', 'preworks_disable_theme_ogp' );
+
+// かんたん入力欄のテキストから、記号を落としたプレーン文を作る
+// 検索スニペットの適正長に合わせ、既定は全角78字。文末は句点で切る。
+function preworks_plain_text_from_easy( $text, $limit = 78 ) {
+    $lines = preg_split( '/\r\n|\r|\n/', (string) $text );
+    $keep  = array();
+    foreach ( $lines as $raw ) {
+        $t = trim( $raw );
+        if ( $t === '' ) continue;
+        if ( preg_match( '/^\[(LINE|画像[:：])/ui', $t ) ) continue;
+        $t = preg_replace( '/^(■|□|＞|>|・|･)\s*/u', '', $t );
+        $t = preg_replace( '/^\d+[\.\)、．]\s*/u', '', $t );
+        $t = preg_replace( '/^【(ポイント|注意)】\s*/u', '', $t );
+        $t = preg_replace( '/^(質問者|コンサルタント|コンサル|本人|質問|Q|A|W|C)[\s:：]+/u', '', $t );
+        $t = preg_replace( '/\*\*(.+?)\*\*/u', '$1', $t );
+        $t = preg_replace( '/__(.+?)__/u', '$1', $t );
+        $t = preg_replace( '/==(.+?)==/u', '$1', $t );
+        $t = preg_replace( '/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/u', '$1', $t );
+        $t = trim( $t );
+        if ( $t === '' ) continue;
+        $keep[] = $t;
+        if ( mb_strlen( implode( '', $keep ) ) >= $limit + 40 ) break;
+    }
+    // 連結。見出し行など句点で終わっていない行には「。」を補って読めるようにする
+    $s = '';
+    foreach ( $keep as $t ) {
+        $s .= $t;
+        if ( ! preg_match( '/[。．！？!?、」）\)]$/u', $t ) ) $s .= '。';
+    }
+    $s = wp_strip_all_tags( $s );
+    $s = preg_replace( '/\s+/u', ' ', $s );
+    $s = preg_replace( '/。{2,}/u', '。', $s );
+    $s = trim( $s );
+    if ( mb_strlen( $s ) > $limit ) {
+        $cut = mb_substr( $s, 0, $limit );
+        $pos = mb_strrpos( $cut, '。' );
+        if ( $pos !== false && $pos >= 30 ) {
+            $s = mb_substr( $cut, 0, $pos + 1 );
+        } else {
+            $s = $cut . '…';
+        }
+    }
+    return $s;
+}
+
+// 固定ページのスラッグごとの既定説明文（AIOSEOで手入力があればそちらが優先）
+function preworks_page_descriptions() {
+    return array(
+        'about'          => 'preworksは、スクールでも求人でもない“第3の場所”。未経験から在宅で働くまでを、学習と実務の両面で支える理由と仕組みを紹介します。',
+        'program'        => 'preworksが提供するプログラムの一覧です。現在はオンライン秘書講座を受付中。本業・育児に合わせて受講期間を選べます。',
+        'program-hisyo'  => '実践型カリキュラムと現役ママ秘書による1on1伴走、修了後のURAKATA案件紹介まで。未経験から最短2ヵ月でオンライン秘書を目指せるオンライン秘書講座です。',
+        'faq'            => 'preworksのオンライン秘書講座について、受講期間・費用・サポート内容・修了後の仕事獲得など、よくいただく質問にお答えします。',
+        'company'        => 'オンライン秘書育成プログラム preworks を運営する、LISH株式会社の会社概要です。',
+        'contact'        => 'preworksへのお問い合わせ窓口です。法人・メディア関連のご相談はフォームから。受講に関するご相談は公式LINEで承っています。',
+        'recruit'        => 'preworks修了生・オンライン秘書の実務経験者を対象とした採用情報です。在宅で続けられる働き方をご案内します。',
+        'privacy'        => 'オンライン秘書育成プログラム preworks（LISH株式会社）における、個人情報の取り扱いについて定めたプライバシーポリシーです。',
+        'terms'          => 'オンライン秘書育成プログラム preworks のサービスをご利用いただくにあたっての利用規約です。',
+        'legal'          => 'オンライン秘書育成プログラム preworks における、特定商取引法に基づく表記です。',
+    );
+}
+
+// ページ種別ごとのフォールバック説明文
+function preworks_fallback_description() {
+    // ブログ記事
+    if ( is_singular( 'post' ) ) {
+        $id   = get_queried_object_id();
+        $lead = get_post_meta( $id, '_pw_bloglead', true );
+        if ( $lead ) return preworks_plain_text_from_easy( $lead );
+        return preworks_plain_text_from_easy( get_post_meta( $id, '_pw_blogbody', true ) );
+    }
+
+    // 修了生の声（個別）
+    if ( is_singular( 'voice' ) ) {
+        $id    = get_queried_object_id();
+        $name  = get_the_title( $id );
+        $attr  = get_post_meta( $id, '_pw_attr', true );
+        $catch = get_post_meta( $id, '_pw_catch', true );
+        $cm    = get_post_meta( $id, '_pw_comment', true );
+        $pf    = get_post_meta( $id, '_pw_profile', true );
+        $head  = $name . ( $attr ? '（' . $attr . '）' : '' ) . 'のインタビュー。';
+        $tail  = $catch ? $catch : '';
+        if ( ! $tail ) $tail = $cm;
+        if ( ! $tail ) $tail = $pf;
+        if ( ! $tail ) $tail = 'preworks修了生が、受講のきっかけから仕事獲得までをお話ししています。';
+        return preworks_plain_text_from_easy( $head . "\n" . $tail );
+    }
+
+    // メンター紹介（個別）
+    if ( is_singular( 'mentor' ) ) {
+        $id   = get_queried_object_id();
+        $name = get_the_title( $id );
+        $attr = get_post_meta( $id, '_pw_attr', true );
+        $role = get_post_meta( $id, '_pw_role', true );
+        $cm   = get_post_meta( $id, '_pw_comment', true );
+        $pf   = get_post_meta( $id, '_pw_profile', true );
+        // 肩書きは長くなりがちなので、紹介文が無いときだけ見出しに含める
+        $tail = $cm ? $cm : $pf;
+        $head = $name . ( $attr ? '（' . $attr . '）' : '' );
+        if ( ! $tail ) {
+            $head .= $role ? '／' . $role : '';
+            $tail  = 'preworks受講生を1on1でサポートする、現役オンライン秘書のメンターです。';
+        }
+        return preworks_plain_text_from_easy( $head . "。\n" . $tail );
+    }
+
+    // 一覧ページ
+    if ( is_post_type_archive( 'voice' ) ) {
+        return 'preworks修了生のインタビュー一覧です。未経験からオンライン秘書デビューした修了生が、受講のきっかけから仕事獲得までをリアルに語ります。';
+    }
+    if ( is_post_type_archive( 'mentor' ) ) {
+        return 'preworksのメンター紹介です。オンライン秘書サービス「URAKATA」の現役メンバーが、1on1であなたの学習と実務を伴走サポートします。';
+    }
+    if ( is_home() && ! is_front_page() ) {
+        return '在宅ワーク・オンライン秘書の始め方や、本業・育児と両立するコツを発信する preworks 公式ブログです。';
+    }
+    if ( is_category() ) {
+        $name = single_cat_title( '', false );
+        return 'カテゴリー「' . $name . '」の記事一覧です。在宅ワーク・オンライン秘書に関する preworks 公式ブログの記事をまとめています。';
+    }
+
+    // 固定ページ
+    if ( is_page() ) {
+        $slug = get_post_field( 'post_name', get_queried_object_id() );
+        $map  = preworks_page_descriptions();
+        if ( isset( $map[ $slug ] ) ) return $map[ $slug ];
+    }
+
+    return '';
+}
+
+// ② AIOSEOの説明文が空のときだけ補完する
+function preworks_filter_seo_description( $desc ) {
+    if ( is_string( $desc ) && trim( $desc ) !== '' ) return $desc;
+    $f = preworks_fallback_description();
+    return $f !== '' ? $f : $desc;
+}
+add_filter( 'aioseo_description', 'preworks_filter_seo_description', 20 );
+add_filter( 'aioseo_og_description', 'preworks_filter_seo_description', 20 );
+add_filter( 'aioseo_twitter_description', 'preworks_filter_seo_description', 20 );
+
+// SEOプラグインが無い環境では、テーマが直接 description を出力する
+function preworks_output_meta_description() {
+    if ( preworks_seo_plugin_active() ) return;
+    $d = preworks_fallback_description();
+    if ( $d === '' && is_front_page() ) {
+        $d = 'オンライン秘書講座「preworks」は、未経験から最短2ヵ月で在宅ワークデビューを目指せる実践型講座です。現役オンライン秘書の1on1サポートや実践課題を通して、仕事に必要なスキルを習得。受講中から実務経験を積める機会も用意しています。';
+    }
+    if ( $d !== '' ) {
+        echo '<meta name="description" content="' . esc_attr( $d ) . '">' . "\n";
+    }
+}
+add_action( 'wp_head', 'preworks_output_meta_description', 1 );

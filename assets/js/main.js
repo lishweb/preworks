@@ -78,3 +78,41 @@ window.addEventListener('load',function(){
     requestAnimationFrame(step);
   });
 })();
+/* 1.3.40 もくじの開閉（項目が多いときのみ。JSが動かない環境では全表示のまま） */
+(function () {
+  document.querySelectorAll('.post-toc[data-collapsible]').forEach(function (nav) {
+    var body = nav.querySelector('.toc-body');
+    var more = nav.querySelector('.toc-more');
+    var btn  = nav.querySelector('.toc-toggle');
+    if (!body || !btn || !more) return;
+    if (body.scrollHeight <= 260) return;            // 短ければ折りたたまない
+    nav.classList.add('is-collapsible');
+    more.hidden = false;
+    var label = btn.querySelector('.toc-toggle-t');
+    btn.addEventListener('click', function () {
+      var open = body.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'もくじを閉じる' : 'もくじをすべて見る');
+      if (label) label.textContent = open ? '閉じる' : '開く';
+      if (!open) nav.scrollIntoView({ block: 'nearest' });
+    });
+  });
+})();
+
+/* 1.3.48 表の横スクロールヒント（実際にはみ出している時だけ出す） */
+(function () {
+  var figs = document.querySelectorAll('.post-body figure.post-table');
+  if (!figs.length) return;
+  function sync() {
+    figs.forEach(function (fig) {
+      var sc = fig.querySelector('.table-scroll');
+      var hint = fig.querySelector('.table-hint');
+      if (!sc || !hint) return;
+      /* 数pxのはみ出しでスワイプを促すのは過剰なので、16px以上のときだけ出す */
+      hint.hidden = (sc.scrollWidth <= sc.clientWidth + 16);
+    });
+  }
+  sync();
+  window.addEventListener('load', sync);
+  window.addEventListener('resize', sync);
+})();
