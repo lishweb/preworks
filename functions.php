@@ -10,7 +10,8 @@ function preworks_setup() {
     add_theme_support( 'automatic-feed-links' );
     add_theme_support( 'html5', array( 'search-form', 'gallery', 'caption', 'style', 'script' ) );
     register_nav_menus( array( 'primary' => 'メインメニュー' ) );
-    add_image_size( 'preworks_card', 800, 600, true );
+    add_image_size( 'preworks_card', 800, 600, true );      // 4:3 横長（修了生の声・ブログのカード）
+    add_image_size( 'preworks_portrait', 960, 1200, true ); // 4:5 縦長（メンターの顔写真）
 }
 add_action( 'after_setup_theme', 'preworks_setup' );
 
@@ -18,12 +19,12 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.12' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.13' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
     // メインJS
-    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.12', true );
+    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.13', true );
 }
 add_action( 'wp_enqueue_scripts', 'preworks_assets' );
 
@@ -94,7 +95,7 @@ function preworks_register_news() {
 add_action( 'init', 'preworks_register_news' );
 
 /* =========================================================================
- * 修了生の声（voice） v1.0.12
+ * 修了生の声（voice） v1.0.12（1.0.13で継続）
  * ------------------------------------------------------------------------
  * テスト環境 1.3.50 から移植。坂さん依頼「本番のWordPressにも修了生の声の実装」
  *
@@ -131,7 +132,7 @@ function preworks_register_voice() {
 add_action( 'init', 'preworks_register_voice' );
 
 /*
- * voice を追加したので、リライトルールを一度だけ再生成する。
+ * voice と mentor を追加したので、リライトルールを一度だけ再生成する。
  * ⚠️ テーマを「有効化」せずファイルだけ差し替える運用では after_switch_theme が
  *    走らないため、これが無いと /voice/ と /voice/○○/ が 404 になる
  *    （通常は「設定 → パーマリンク → 変更を保存」で直すが、忘れると坂さんに
@@ -139,12 +140,29 @@ add_action( 'init', 'preworks_register_voice' );
  * soft flush（第2引数 false）なので .htaccess は書き換えない。
  * 一度実行したらフラグを立て、以後は走らない。
  */
-function preworks_flush_rewrite_1012() {
-    if ( get_option( 'preworks_rewrite_rev' ) === '1012' ) return;
+function preworks_flush_rewrite_1013() {
+    if ( get_option( 'preworks_rewrite_rev' ) === '1013' ) return;
     flush_rewrite_rules( false );
-    update_option( 'preworks_rewrite_rev', '1012' );
+    update_option( 'preworks_rewrite_rev', '1013' );
 }
-add_action( 'admin_init', 'preworks_flush_rewrite_1012' );
+add_action( 'admin_init', 'preworks_flush_rewrite_1013' );
+/*
+ * そのカスタム投稿タイプに公開済みの記事があるか。v1.0.13
+ * ヘッダー・フッターのリンク先の切り替えに使う。
+ *   記事0件 → 従来どおりトップページ内のアンカー（#voice / #mentor）
+ *   記事あり → 専用ページ（/voice/ / /mentor/）
+ * 入稿が終わるまでナビが空ページを指してしまうのを防ぐ。
+ * 記事が公開された時点で自動的に切り替わるので、再反映は不要。
+ * wp_count_posts() はWordPress側でキャッシュされるため負荷にならない。
+ */
+function preworks_has_cpt_posts( $type ) {
+    static $cache = array();
+    if ( isset( $cache[ $type ] ) ) return $cache[ $type ];
+    $counts = wp_count_posts( $type );
+    $cache[ $type ] = ( $counts && ! empty( $counts->publish ) );
+    return $cache[ $type ];
+}
+
 
 /*
  * 修了生の声のスラッグ検査（v1.0.12）
@@ -157,18 +175,24 @@ add_action( 'admin_init', 'preworks_flush_rewrite_1012' );
  * ・/voice/○○/ は第2階層なので、固定ページとのスラッグ衝突は起きない。
  *   よって衝突チェックは行わない（投稿を本番に載せる段階で別途必要になる）。
  */
+function preworks_slug_post_types() {
+    return array( 'voice', 'mentor' );
+}
+
 function preworks_slug_warnings( $post_id ) {
     $warn = array();
     $post = get_post( $post_id );
-    if ( ! $post || 'voice' !== $post->post_type || 'auto-draft' === $post->post_status ) return $warn;
+    if ( ! $post || 'auto-draft' === $post->post_status ) return $warn;
+    if ( ! in_array( $post->post_type, preworks_slug_post_types(), true ) ) return $warn;
     $slug = urldecode( (string) $post->post_name );
     if ( '' === $slug ) return $warn;
+    $ex = ( 'mentor' === $post->post_type ) ? 'nakasone-ikuko' : 'oshiro-san';
     if ( ! preg_match( '/^[a-z0-9\-]+$/', $slug ) ) {
         $warn[] = '<strong>ページURL（スラッグ）をご確認ください。</strong><br>'
                 . '現在のスラッグ：<code>' . esc_html( $slug ) . '</code><br>'
                 . '日本語のURLは共有時に長い記号列（%E3%82…）に変換され、SNSやメールで扱いづらくなります。'
                 . '<strong>英小文字・数字・ハイフン（-）</strong>だけで設定してください。'
-                . '例：<code>oshiro-san</code><br>'
+                . '例：<code>' . esc_html( $ex ) . '</code><br>'
                 . '右パネルの「URL」欄（クラシック画面ではタイトル下の「パーマリンク」）から変更できます。'
                 . '<strong>公開後の変更はSNS等の共有リンクが開けなくなるため、公開前に確定してください。</strong>';
     }
@@ -178,7 +202,8 @@ function preworks_slug_warnings( $post_id ) {
 function preworks_slug_admin_notice() {
     if ( ! function_exists( 'get_current_screen' ) ) return;
     $screen = get_current_screen();
-    if ( ! $screen || 'post' !== $screen->base || 'voice' !== $screen->post_type ) return;
+    if ( ! $screen || 'post' !== $screen->base ) return;
+    if ( ! in_array( $screen->post_type, preworks_slug_post_types(), true ) ) return;
     global $post;
     if ( ! $post ) return;
     foreach ( preworks_slug_warnings( $post->ID ) as $w ) {
@@ -209,7 +234,7 @@ add_action( 'add_meta_boxes', 'preworks_voice_metabox' );
 // ===== かんたん入力欄：アイコン選択（メディアライブラリ）=====
 function preworks_admin_media_enqueue( $hook ) {
     $screen = get_current_screen();
-    if ( $screen && in_array( $screen->post_type, array( 'voice' ), true ) ) {
+    if ( $screen && in_array( $screen->post_type, array( 'voice', 'mentor' ), true ) ) {
         wp_enqueue_media();
     }
 }
@@ -501,6 +526,186 @@ function preworks_sc_vcs( $atts, $content = null ) {
     return '<div class="vc-row vc-cs"><div class="vc-av">' . $av . '<div class="vc-name">' . esc_html( $nm ) . '</div></div><div class="vc-bubble">' . wp_kses_post( trim( $content ) ) . '</div></div>';
 }
 add_shortcode( 'vcs', 'preworks_sc_vcs' );
+
+/* 本番への移植メモ（v1.0.13）
+ * 坂さん依頼（9/18）「本番のWordPressにもメンター紹介の実装を」
+ * ＋ No.12（9/21・納期9/28）「トップに新メンター2名を追加。4名のみ配置」
+ *
+ * トップページ（front-page.php）は menu_order 順の上位4件を表示、
+ * 一覧（/mentor/）は全件表示。0件のあいだは従来の固定4枚を表示する。
+ * 写真は preworks_portrait（960×1200 / 4:5 縦長）を使う。
+ */
+
+
+/* =========================================================================
+ * No.9 メンター紹介（カスタム投稿） v1.0.13
+ * 「修了生の声」(voice) と同じ作りに揃えている。記事URLは /mentor/スラグ/
+ * ========================================================================= */
+function preworks_register_mentor() {
+    register_post_type( 'mentor', array(
+        'labels' => array(
+            'name' => 'メンター紹介', 'singular_name' => 'メンター紹介',
+            'add_new' => '新規追加', 'add_new_item' => 'メンター紹介を追加',
+            'edit_item' => 'メンター紹介を編集', 'all_items' => 'メンター紹介一覧',
+            'menu_name' => 'メンター紹介', 'view_item' => 'メンター紹介を表示',
+        ),
+        'public' => true,
+        'has_archive' => true,
+        'menu_icon' => 'dashicons-groups',
+        'menu_position' => 7,
+        'rewrite' => array( 'slug' => 'mentor', 'with_front' => false ),
+        'supports' => array( 'title', 'thumbnail', 'page-attributes' ),
+        'show_in_rest' => false,
+    ) );
+}
+add_action( 'init', 'preworks_register_mentor' );
+
+// メンター一覧(/mentor/)の並び順を「ページ属性 → 順序」に合わせる（v1.3.25）
+// トップページ #mentor は menu_order 指定済み。アーカイブは既定の公開日順だったため、
+// 5人目の追加や順序変更でトップと一覧の並びがズレる不具合を修正。
+function preworks_mentor_archive_order( $query ) {
+    if ( is_admin() || ! $query->is_main_query() ) return;
+    if ( ! $query->is_post_type_archive( 'mentor' ) ) return;
+    $query->set( 'orderby', 'menu_order title' );
+    $query->set( 'order', 'ASC' );
+    $query->set( 'posts_per_page', -1 );
+}
+add_action( 'pre_get_posts', 'preworks_mentor_archive_order' );
+
+// 属性テキスト（例：オンライン秘書歴 3年｜40代｜3児ママ）を既存の見た目に整形
+function preworks_mentor_attr_html( $attr ) {
+    $out = esc_html( $attr );
+    $out = preg_replace( '/(\d+)/', '<b class="mnum">$1</b>', $out );
+    $out = str_replace( array( '｜', '|' ), '<span class="mdiv">｜</span>', $out );
+    return $out;
+}
+
+// 顔写真のURL。アイキャッチ未設定なら、旧URLスラグ(mentor-1〜)からテーマ内の既存写真を使う
+// メンターの顔写真は縦長（4:5）。preworks_card（4:3）を使うと
+// アイキャッチを設定した時点でWordPress側が4:3に切ってしまい、
+// さらに4:5の枠に入るため二段階で切られる。既定を preworks_portrait にする。
+function preworks_mentor_photo_url( $post_id = null, $size = 'preworks_portrait' ) {
+    $post_id = $post_id ? $post_id : get_the_ID();
+    $url = get_the_post_thumbnail_url( $post_id, $size );
+    if ( $url ) return $url;
+    $key = get_post_meta( $post_id, '_pw_oldslug', true );
+    if ( ! $key ) $key = get_post_field( 'post_name', $post_id );
+    if ( preg_match( '/mentor-([1-9][0-9]?)/', (string) $key, $m ) ) {
+        $file = '/mentor-' . $m[1] . '.jpg';
+        if ( file_exists( get_template_directory() . '/assets/img' . $file ) ) {
+            return PREWORKS_IMG . $file;
+        }
+    }
+    return '';
+}
+
+function preworks_mentor_metabox() {
+    add_meta_box( 'preworks_mentor_fields', 'メンター紹介（かんたん入力）', 'preworks_mentor_metabox_html', 'mentor', 'normal', 'high' );
+}
+add_action( 'add_meta_boxes', 'preworks_mentor_metabox' );
+
+function preworks_mentor_metabox_html( $post ) {
+    wp_nonce_field( 'preworks_mentor_save', 'preworks_mentor_nonce' );
+    echo preworks_slug_warning_box( $post->ID );
+    $catch   = get_post_meta( $post->ID, '_pw_catch', true );
+    $youtube = get_post_meta( $post->ID, '_pw_youtube', true );
+    $profile = get_post_meta( $post->ID, '_pw_profile', true );
+    $qa      = get_post_meta( $post->ID, '_pw_qa', true );
+    $attr    = get_post_meta( $post->ID, '_pw_attr', true );
+    $role    = get_post_meta( $post->ID, '_pw_role', true );
+    $comment = get_post_meta( $post->ID, '_pw_comment', true );
+    $oldslug = get_post_meta( $post->ID, '_pw_oldslug', true );
+    $name_l  = get_post_meta( $post->ID, '_pw_name_l', true );
+    $name_r  = get_post_meta( $post->ID, '_pw_name_r', true );
+    $icon_l  = get_post_meta( $post->ID, '_pw_icon_l', true );
+    $icon_r  = get_post_meta( $post->ID, '_pw_icon_r', true );
+    $ph = "■メンターになったきっかけは？\n質問者：メンターになったきっかけを教えてください。\n本人：育児と両立できる働き方を探していたときに、URAKATAに出会いました。\n\n自分が助けてもらった経験があるので、今度は誰かの力になりたいと思いました。\n質問者：現場のリアルを知っている方に伴走してもらえるのは**心強い**ですね。";
+    $s = 'style="width:100%;max-width:640px"';
+    echo '<style>.pwf label{display:block;margin:14px 0 4px;font-weight:600}.pwf .hint{color:#888;font-size:12px;font-weight:400}.pwf hr{margin:20px 0;border:0;border-top:1px solid #eee}</style>';
+    echo '<div class="pwf">';
+    echo '<p style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:13px;">下の欄を埋めるだけでページが完成します。<b>本文（下のエディタ）は使いません。</b><br>①タイトル＝メンター名（画面上の「タイトルを追加」）／②アイキャッチ画像＝顔写真（一覧カードと吹き出しのアイコンになります）<br><b>顔写真は縦長で用意してください（推奨 960×1200＝4:5）。</b>一覧・トップのカードは縦長で表示されます。</p>';
+    echo '<label>キャッチコピー <span class="hint">（詳細ページ上部の大きな見出し）</span></label>';
+    echo '<input type="text" name="pw_catch" value="' . esc_attr( $catch ) . '" ' . $s . '>';
+    echo '<label>YouTube動画ID <span class="hint">（https://youtu.be/XXXX の XXXX 部分だけ。動画なしなら空欄でOK）</span></label>';
+    echo '<input type="text" name="pw_youtube" value="' . esc_attr( $youtube ) . '" ' . $s . '>';
+    echo '<label>プロフィール <span class="hint">（Profile枠に出る紹介文）</span></label>';
+    echo '<textarea name="pw_profile" rows="3" ' . $s . '>' . esc_textarea( $profile ) . '</textarea>';
+    echo '<hr><p style="font-weight:700;margin:0 0 4px;">▼ 吹き出しの名前とアイコン</p>';
+    echo '<p style="font-size:12px;color:#666;margin:0 0 6px;">記事ごとに変更できます。空欄のままなら（　）内が使われます。</p>';
+    echo '<label>左（本人）の名前 <span class="hint">（空欄＝タイトルの文字。タイトルと違う表示名にしたいときに入力）</span></label>';
+    echo '<input type="text" name="pw_name_l" value="' . esc_attr( $name_l ) . '" ' . $s . ' placeholder="' . esc_attr( get_the_title( $post ) ) . '">';
+    echo '<label>左（本人）のアイコン <span class="hint">（空欄＝アイキャッチ画像）</span></label>';
+    preworks_media_field( 'pw_icon_l', $icon_l );
+    echo '<label>右（聞き手）の名前 <span class="hint">（空欄＝質問者）</span></label>';
+    echo '<input type="text" name="pw_name_r" value="' . esc_attr( $name_r ) . '" ' . $s . ' placeholder="質問者">';
+    echo '<label>右（聞き手）のアイコン <span class="hint">（空欄＝名前の頭文字の丸バッジ）</span></label>';
+    preworks_media_field( 'pw_icon_r', $icon_r );
+    echo '<hr><label>インタビュー（Q&amp;A・会話）</label>';
+    echo '<div style="background:#fff8ef;border:1px solid #f0e2cf;padding:10px 14px;border-radius:6px;font-size:12.5px;line-height:1.9;margin:0 0 6px;max-width:640px;">'
+       . '<b>書き方</b><br>'
+       . '・<code>■</code> で始まる行 ＝ 質問見出し<br>'
+       . '・<code>質問者：</code> で始まる行 ＝ <b>右</b>の吹き出しが始まる<br>'
+       . '・<code>本人：</code> で始まる行 ＝ <b>左</b>の吹き出しが始まる<br>'
+       . '・記号を付けない行 ＝ <b>直前の吹き出しの続き（改行）</b><br>'
+       . '・空行 ＝ 吹き出しの中の<b>一行スペース</b>（同じ人の発言が続くかぎり1つの吹き出しにまとまります）<br>'
+       . '・<code>---</code> だけの行 ＝ 同じ人でも<b>そこで吹き出しを分ける</b><br>'
+       . '・装飾： <code>**太字**</code> ／ <code>__下線__</code> ／ <code>==マーカー==</code> ／ <code>[表示文字](URL)</code>'
+       . '</div>';
+    echo '<textarea name="pw_qa" rows="12" ' . $s . ' placeholder="' . esc_attr( $ph ) . '">' . esc_textarea( $qa ) . '</textarea>';
+    echo '<hr><p style="font-weight:700;margin:0 0 4px;">▼ 一覧カードに出る内容</p>';
+    echo '<label>属性 <span class="hint">（例：オンライン秘書歴 3年｜40代｜3児ママ　※数字は自動で強調されます）</span></label>';
+    echo '<input type="text" name="pw_attr" value="' . esc_attr( $attr ) . '" ' . $s . '>';
+    echo '<label>肩書き・担当 <span class="hint">（例：URAKATA オペレーションマネージャー）</span></label>';
+    echo '<input type="text" name="pw_role" value="' . esc_attr( $role ) . '" ' . $s . '>';
+    echo '<label>紹介文 <span class="hint">（一覧カードに出る短い文章）</span></label>';
+    echo '<textarea name="pw_comment" rows="3" ' . $s . '>' . esc_textarea( $comment ) . '</textarea>';
+    echo '<hr><label>旧URLスラグ <span class="hint">（任意。以前の固定ページが /mentor-1/ だった方は「mentor-1」と入力。旧URLからの自動転送に使われ、アイキャッチ未設定のときはテーマ内の既存写真 mentor-1.jpg も自動で使われます）</span></label>';
+    echo '<input type="text" name="pw_oldslug" value="' . esc_attr( $oldslug ) . '" ' . $s . '>';
+    echo '</div>';
+}
+
+function preworks_mentor_save( $post_id ) {
+    if ( ! isset( $_POST['preworks_mentor_nonce'] ) || ! wp_verify_nonce( $_POST['preworks_mentor_nonce'], 'preworks_mentor_save' ) ) return;
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+    if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+    $text = array( 'pw_catch' => '_pw_catch', 'pw_youtube' => '_pw_youtube', 'pw_attr' => '_pw_attr', 'pw_role' => '_pw_role', 'pw_oldslug' => '_pw_oldslug', 'pw_name_l' => '_pw_name_l', 'pw_name_r' => '_pw_name_r' );
+    foreach ( $text as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, sanitize_text_field( wp_unslash( $_POST[ $k ] ) ) );
+    }
+    $area = array( 'pw_profile' => '_pw_profile', 'pw_comment' => '_pw_comment', 'pw_qa' => '_pw_qa' );
+    foreach ( $area as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, sanitize_textarea_field( wp_unslash( $_POST[ $k ] ) ) );
+    }
+    $ids = array( 'pw_icon_l' => '_pw_icon_l', 'pw_icon_r' => '_pw_icon_r' );
+    foreach ( $ids as $k => $m ) {
+        if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, absint( $_POST[ $k ] ) );
+    }
+}
+add_action( 'save_post_mentor', 'preworks_mentor_save' );
+
+// 旧URL（/mentor-1/ 〜）から新しい記事URLへ301転送。該当が無ければ一覧へ
+function preworks_mentor_legacy_redirect() {
+    if ( ! is_404() ) return;
+    $path = isset( $_SERVER['REQUEST_URI'] ) ? parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '';
+    $seg  = basename( trim( (string) $path, '/' ) );
+    if ( ! preg_match( '/^mentor-[1-9][0-9]?$/', $seg ) ) return;
+    $found = get_posts( array(
+        'post_type'      => 'mentor',
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+        'meta_key'       => '_pw_oldslug',
+        'meta_value'     => $seg,
+    ) );
+    $url = $found ? get_permalink( $found[0] ) : get_post_type_archive_link( 'mentor' );
+    if ( $url ) {
+        wp_safe_redirect( $url, 301 );
+        exit;
+    }
+}
+add_action( 'template_redirect', 'preworks_mentor_legacy_redirect' );
+
 
 
 // パーマリンクを Post ID 形式に（日本語スラッグ回避＝吉田さん要望。固定ページは従来どおりスラッグ /about/ 等）

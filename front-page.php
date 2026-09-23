@@ -344,10 +344,42 @@
     <div class="wrap">
       <div class="headblock"><span class="eyebrow">Mentor</span><h2 class="htitle">現役オンライン秘書が <span class="mk">あなた専属のメンターに</span></h2><p class="subhead">オンライン秘書サービス「URAKATA」の実務メンバーが、1on1でサポートします。</p></div>
       <div class="mgrid">
-        <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-1.jpg" alt="仲宗根 偉子"><div class="mbody"><h3>仲宗根 偉子</h3><p class="m-attr">オンライン秘書歴：3年／40代／3児ママ</p><p>受講中の不安やつまずきにも寄り添いながら、一人ひとりのペースに合わせてサポートします。オンライン秘書として働くための一歩を、一緒に進んでいきましょう！</p></div></div>
-        <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-2.jpg" alt="髙松 由衣"><div class="mbody"><h3>髙松 由衣</h3><p class="m-attr">オンライン秘書歴：2年／30代／1児ママ</p><p>URAKATAのPR・広報を担当。「伝える力」の基本から、実務で使える形でお伝えします。</p></div></div>
-        <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-3.jpg" alt="戸田 あかね"><div class="mbody"><h3>戸田 あかね</h3><p class="m-attr">オンライン秘書歴：2年／30代／3児ママ</p><p>URAKATAのカスタマーサクセス担当。クライアント対応の勘所を、一緒に磨きます。</p></div></div>
-        <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-4.jpg" alt="玉木 達子"><div class="mbody"><h3>玉木 達子</h3><p class="m-attr">オンライン秘書歴：2年半／30代／3児ママ</p><p>URAKATAのコーディネートディレクター。案件と人をつなぐ視点で、あなたに合う進め方を一緒に考えます。</p></div></div>
+        <?php
+          /* メンター紹介（mentor）を表示順（ページ属性→順序）の上位4件だけ表示する。v1.0.13
+             坂さん No.12「TOPページには4名のみ配置したい」に対応。
+             一覧（/mentor/）は全件表示なので、5人目以降も一覧には出る。
+             0件のあいだは else 側の従来の固定4枚を表示する（トップが空になるのを避ける）。 */
+          $pw_mq = new WP_Query( array(
+              'post_type'           => 'mentor',
+              'posts_per_page'      => 4,
+              'post_status'         => 'publish',
+              'orderby'             => 'menu_order title',
+              'order'               => 'ASC',
+              'no_found_rows'       => true,
+              'ignore_sticky_posts' => true,
+          ) );
+          if ( $pw_mq->have_posts() ) :
+            while ( $pw_mq->have_posts() ) : $pw_mq->the_post();
+              $m_attr = get_post_meta( get_the_ID(), '_pw_attr', true );
+              $m_cm   = get_post_meta( get_the_ID(), '_pw_comment', true );
+              $m_ph   = preworks_mentor_photo_url();
+        ?>
+          <a class="mcard reveal" href="<?php the_permalink(); ?>" style="text-decoration:none;color:inherit;">
+            <?php if ( $m_ph ) : ?><img src="<?php echo esc_url( $m_ph ); ?>" alt="<?php the_title_attribute(); ?>"><?php endif; ?>
+            <div class="mbody">
+              <h3><?php the_title(); ?></h3>
+              <?php if ( $m_attr ) : ?><p class="m-attr"><?php echo preworks_mentor_attr_html( $m_attr ); ?></p><?php endif; ?>
+              <?php if ( $m_cm ) : ?><p><?php echo esc_html( $m_cm ); ?></p><?php endif; ?>
+              <p class="mprof-link">プロフィールを見る →</p>
+            </div>
+          </a>
+        <?php endwhile; wp_reset_postdata(); else : ?>
+        <?php /* ===== 0件のときのフォールバック：従来の固定4枚 ===== */ ?>
+          <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-1.jpg" alt="仲宗根 偉子"><div class="mbody"><h3>仲宗根 偉子</h3><p class="m-attr">オンライン秘書歴：3年／40代／3児ママ</p><p>受講中の不安やつまずきにも寄り添いながら、一人ひとりのペースに合わせてサポートします。オンライン秘書として働くための一歩を、一緒に進んでいきましょう！</p></div></div>
+          <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-2.jpg" alt="髙松 由衣"><div class="mbody"><h3>髙松 由衣</h3><p class="m-attr">オンライン秘書歴：2年／30代／1児ママ</p><p>URAKATAのPR・広報を担当。「伝える力」の基本から、実務で使える形でお伝えします。</p></div></div>
+          <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-3.jpg" alt="戸田 あかね"><div class="mbody"><h3>戸田 あかね</h3><p class="m-attr">オンライン秘書歴：2年／30代／3児ママ</p><p>URAKATAのカスタマーサクセス担当。クライアント対応の勘所を、一緒に磨きます。</p></div></div>
+          <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-4.jpg" alt="玉木 達子"><div class="mbody"><h3>玉木 達子</h3><p class="m-attr">オンライン秘書歴：2年半／30代／3児ママ</p><p>URAKATAのコーディネートディレクター。案件と人をつなぐ視点で、あなたに合う進め方を一緒に考えます。</p></div></div>
+        <?php endif; ?>
       </div>
     </div>
   </section>
