@@ -395,6 +395,41 @@
     </div>
   </section>
 
+  <!-- ⑪-2 お役立ちブログ（テスト環境 1.3.x から移植）v1.0.26 -->
+  <?php
+    /* ⚠️ 坂さん依頼「ブログ記事機能を本番Wordpressに実装」の一部。
+     *    1.0.19〜1.0.25 では front-page.php を移植対象から外していたため、
+     *    トップページにブログ欄が出ていなかった（移植漏れ）。
+     *
+     * ⚠️ 公開記事が0件のあいだはセクションごと出さない。
+     *    テスト環境は0件のとき「ブログ記事は準備中です。」を出す実装だが、
+     *    本番は坂さんの入稿前なので、空のセクションをトップに出したくない。
+     *    ヘッダー・フッターの「ブログ」と同じ条件（preworks_has_blog_posts）で
+     *    切り替わるので、記事を公開した時点で自動的に出る。
+     */
+  ?>
+  <?php if ( preworks_has_blog_posts() ) : ?>
+  <section class="blog blog-preview sec-pad" id="blog-preview">
+    <div class="wrap">
+      <div class="headblock"><span class="eyebrow">Blog</span><h2 class="htitle">お役立ち<span class="mk">ブログ</span></h2><p class="subhead">在宅ワーク・オンライン秘書のヒントを発信中。</p></div>
+      <div class="bloggrid">
+        <?php
+          $pw_bq = new WP_Query( array( 'post_type' => 'post', 'posts_per_page' => 3, 'post_status' => 'publish' ) );
+          if ( $pw_bq->have_posts() ) : while ( $pw_bq->have_posts() ) : $pw_bq->the_post();
+        ?>
+          <a class="acard reveal" href="<?php the_permalink(); ?>">
+            <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'alt' => get_the_title() ) ); } else { ?><img src="<?php echo PREWORKS_IMG; ?>/case-1.jpg" alt=""><?php } ?>
+            <div class="abody"><div class="meta"><span class="cat"><?php $c = get_the_category(); echo $c ? esc_html( $c[0]->name ) : 'お役立ち'; ?></span><span><?php echo get_the_date( 'Y.m.d' ); ?></span></div><h3><?php the_title(); ?></h3><span class="readmore">続きを読む →</span></div>
+          </a>
+        <?php endwhile; wp_reset_postdata(); else : ?>
+          <p style="grid-column:1/-1;text-align:center;color:var(--muted);">ブログ記事は準備中です。</p>
+        <?php endif; ?>
+      </div>
+      <div class="center" style="margin-top:34px;"><a class="btn-more" href="<?php echo home_url('/blog/'); ?>">ブログをもっと見る<span class="btn-arw">▶</span></a></div>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <!-- ⑫ FAQ -->
   <section class="faq sec-pad" id="faq">
     <div class="wrap">
