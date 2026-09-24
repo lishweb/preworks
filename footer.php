@@ -31,6 +31,10 @@
           <li><a href="<?php echo esc_url( $preworks_mentor_href ); ?>">メンター紹介</a></li>
           <li><a href="<?php echo home_url('/faq/'); ?>">よくある質問</a></li>
           <li><a href="<?php echo home_url('/contact/'); ?>">お問い合わせ</a></li>
+          <?php /* ブログは公開記事が1件以上のときだけ出す。v1.0.25 */ ?>
+          <?php if ( preworks_has_blog_posts() ) : ?>
+            <li><a href="<?php echo home_url('/blog/'); ?>">ブログ</a></li>
+          <?php endif; ?>
         </ul>
       </div>
       <div>

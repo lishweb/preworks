@@ -33,6 +33,10 @@
     <a href="<?php echo esc_url( $preworks_voice_href ); ?>">修了生の声</a>
     <a href="<?php echo esc_url( $preworks_mentor_href ); ?>">メンター紹介</a>
     <a href="<?php echo home_url('/faq/'); ?>">よくある質問</a>
+    <?php /* ブログは公開記事が1件以上のときだけ出す。LPは離脱を防ぐため出さない。v1.0.25 */ ?>
+    <?php if ( ! preworks_is_lp() && preworks_has_blog_posts() ) : ?>
+      <a href="<?php echo home_url('/blog/'); ?>">ブログ</a>
+    <?php endif; ?>
   </nav>
   <div class="nav-cta">
     <a class="btn btn-line" href="<?php echo esc_url( preworks_line_url() ); ?>" target="_blank" rel="noopener"><img src="<?php echo PREWORKS_IMG; ?>/LINE_Brand_icon.png" alt="LINE" class="liico">無料オンライン相談</a>

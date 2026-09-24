@@ -19,12 +19,12 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.24' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.25' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
     // メインJS
-    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.24', true );
+    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.25', true );
 }
 add_action( 'wp_enqueue_scripts', 'preworks_assets' );
 
@@ -649,6 +649,25 @@ function preworks_mentor_is_ready( $post_id = null ) {
  * ⚠️ 坂さんの運用は「3名分を下書きで入稿 → 公開」。3件そろうまで反映されないことを
  *    入稿者が分かるように、管理画面に残り件数を表示する（下の関数）。
  */
+/*
+ * ブログ記事が1件以上公開されているか。v1.0.25
+ *
+ * ⚠️ 本番のヘッダー・フッターには「ブログ」へのリンクが無かった（移植漏れ）。
+ *    テスト環境（1.3.x）には header.php 19行目・footer.php 19行目にある。
+ *    このままだと /blog/ を開通させてもどこからも辿れない孤立ページになる。
+ *
+ * 記事0件のうちは空ページへの導線を作らないため、公開記事が1件以上の
+ * ときだけリンクを出す。修了生の声・メンター紹介と同じ方式。
+ * 坂さんが記事を公開した時点で自動的にリンクが出るので、再反映は不要。
+ */
+function preworks_has_blog_posts() {
+    static $n = null;
+    if ( null !== $n ) return $n;
+    $c = wp_count_posts( 'post' );
+    $n = ( $c && ! empty( $c->publish ) );
+    return $n;
+}
+
 function preworks_voice_live_min() {
     return 3;
 }
