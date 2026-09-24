@@ -1826,3 +1826,9 @@ a.btn-more{display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
   .post-body h2       {font-size:clamp(21px,2.5vw,28px);}
   .post-body .post-toc{padding:24px 28px;}
 }
+
+
+/* 1.3.59 / 1.0.24  目次のカタカナ保護は PHP 側（preworks_kana_nobr）で入れた。
+ * .nobr は .post-body 配下で定義しているが、目次は .post-body の中にあるので効く。
+ * 念のため目次配下でも明示しておく（構造が変わっても壊れないように）。 */
+.post-body .post-toc .nobr{white-space:nowrap;}

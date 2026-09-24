@@ -19,12 +19,12 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.23' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.24' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
     // メインJS
-    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.23', true );
+    wp_enqueue_script( 'preworks-main', get_template_directory_uri() . '/assets/js/main.js', array(), '1.0.24', true );
 }
 add_action( 'wp_enqueue_scripts', 'preworks_assets' );
 
@@ -1571,7 +1571,10 @@ function preworks_content_toc( $content ) {
     if ( count( $toc_items ) < 2 ) return $content;
     $li = '';
     foreach ( $toc_items as $it ) {
-        $li .= '<li class="toc-l' . $it['level'] . '"><a href="#' . esc_attr( $it['id'] ) . '">' . esc_html( $it['text'] ) . '</a></li>';
+        // 目次にもカタカナ保護をかける。v1.3.59
+        // これが無いと、同じ見出し文字列が h2 では「スクロール」を守り、
+        // 目次では「スクロー|ル」と割れて挙動が食い違う（堀川さん指摘 9/25「統一されてない」）。
+        $li .= '<li class="toc-l' . $it['level'] . '"><a href="#' . esc_attr( $it['id'] ) . '">' . preworks_kana_nobr( esc_html( $it['text'] ) ) . '</a></li>';
     }
     $box = preworks_toc_box( $li, count( $toc_items ) );
     return $box . $content;
@@ -1854,7 +1857,8 @@ function preworks_render_blog_body( $text ) {
     $tochtml = '';
     if ( count( $toc ) >= 2 ) {
         $li = '';
-        foreach ( $toc as $it ) { $li .= '<li class="toc-l' . $it[0] . '"><a href="#' . esc_attr( $it[1] ) . '">' . esc_html( $it[2] ) . '</a></li>'; }
+        // 目次にもカタカナ保護をかける。v1.3.59（上の preworks_content_toc と同じ理由）
+        foreach ( $toc as $it ) { $li .= '<li class="toc-l' . $it[0] . '"><a href="#' . esc_attr( $it[1] ) . '">' . preworks_kana_nobr( esc_html( $it[2] ) ) . '</a></li>'; }
         $tochtml = preworks_toc_box( $li, count( $toc ) );
     }
     return $tochtml . $out;
