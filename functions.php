@@ -19,7 +19,7 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.27' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.28' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
@@ -1593,47 +1593,210 @@ function preworks_content_toc( $content ) {
         // 目次にもカタカナ保護をかける。v1.3.59
         // これが無いと、同じ見出し文字列が h2 では「スクロール」を守り、
         // 目次では「スクロー|ル」と割れて挙動が食い違う（堀川さん指摘 9/25「統一されてない」）。
-        $li .= '<li class="toc-l' . $it['level'] . '"><a href="#' . esc_attr( $it['id'] ) . '">' . preworks_kana_nobr( esc_html( $it['text'] ) ) . '</a></li>';
+        $li .= '<li class="toc-l' . $it['level'] . '"><a href="#' . esc_attr( $it['id'] ) . '">' . preworks_phrase_wbr( esc_html( $it['text'] ) ) . '</a></li>';
     }
     $box = preworks_toc_box( $li, count( $toc_items ) );
     return $box . $content;
 }
 add_filter( 'the_content', 'preworks_content_toc', 20 );
 
-/*
- * カタカナ語の途中割れを防ぐ。v1.3.53
- * 坂さん指摘（9/24）「共通デザイ|ンの確認用」「すべてダ|ミーです」への対応。
+/* =========================================================================
+ * 折り返し制御（BudouX 文節分割）  v1.0.28
  *
- * ⚠️ このテーマは h1〜h4 と .lead に word-break:auto-phrase（文節単位の折り返し）を
- *    使っているが Chrome 系だけの機能。iOS Safari では効かず文字単位に折り返すため、
- *    カタカナの連続を <span class="nobr"> で囲んで折り返しを禁止する。
+ * 背景：
+ *   このテーマは h1〜h4 と .lead に word-break:auto-phrase（文節単位の折り返し）
+ *   を使っていたが、これは Chrome 系だけの機能。iOS Safari では効かず文字単位に
+ *   折り返るため、坂さんから「改行位置がおかしい」（9/24・9/25）と3回指摘された。
  *
- * ⚠️ 13文字以上のカタカナ語は対象外。nowrap にすると狭い幅であふれるため。
- * ⚠️ 表のセルには適用しない。セルが広がって横スクロール量が増えるうえ、
- *    坂さんが「テーブルは問題ない」と明言しているため。
- *    適用先は preworks_render_blog_body() の $inline と preworks_render_lead() だけ。
- * ⚠️ 引数は preworks_inline_deco() を通した HTML なので、タグの内側は書き換えない
- *    （リンクのURLにカタカナが入っていても壊さない）。
- */
-function preworks_kana_nobr( $html ) {
+ *   1.0.21 keep-all      → 句読点の間の塊が1行に入らず結局割れる
+ *   1.0.22 カタカナ保護  → カタカナ以外（削除し|ます）が割れる／1行目に余白が残る
+ *   （本番は1.0.27でカタカナ保護のまま）      → 坂さんの端末で「デザイ|ン」「ダ|ミー」（再指摘）
+ *
+ * 方針：
+ *   Chrome の auto-phrase は Google の BudouX そのもの。これをサーバー側で
+ *   実行して <wbr>（折り返し可能位置）を埋め込む。CSS 側は word-break:keep-all
+ *   にして「<wbr> と句読点以外では折り返さない」状態にする。
+ *   ブラウザ機能に依存しないので、iOS Safari でも Chrome と同じ位置で折り返る。
+ *
+ * ⚠️ 文字サイズ拡大への耐性：
+ *   坂さんの端末は iOS の文字拡大でリード文が約21px相当（16px指定に対し1.3倍）。
+ *   文節が1行に入らないと overflow-wrap:anywhere で途中割れが復活するため、
+ *   8文字を超える文節は文字種の変わり目でさらに細分化している（下の
+ *   preworks_script_runs）。実測で 32px（2倍）まで途中割れゼロ・横スクロールなし。
+ *
+ * ⚠️ 表（table）には適用しない。セルが広がって横スクロール量が増えるうえ、
+ *    坂さんが「テーブルは問題ない」と明言している。table のセルは
+ *    preworks_inline_deco() を直接呼んでいるのでここを通らない。
+ *
+ * ⚠️ CSS の word-break:keep-all と必ずセットで使う。keep-all が無いと <wbr> は
+ *    「追加の折り返し候補」にしかならず、従来どおり文字単位で折り返してしまう。
+ *
+ * モデル: assets/budoux-ja.json（google/budoux, Apache-2.0, 20KB）
+ * 検証  : 本家 Python 実装と全テスト文で出力が完全一致することを確認済み。
+ * ========================================================================= */
+
+/** モデルと基準スコアを読む（1リクエスト1回だけ） */
+function preworks_budoux_model() {
+    static $model = null, $base = 0.0;
+    if ( null === $model ) {
+        $file = get_template_directory() . '/assets/budoux-ja.json';
+        $json = ( $file && is_readable( $file ) ) ? file_get_contents( $file ) : '';
+        $m    = $json ? json_decode( $json, true ) : null;
+        $model = is_array( $m ) ? $m : array();
+        $sum   = 0;
+        foreach ( $model as $group ) {
+            if ( is_array( $group ) ) { foreach ( $group as $v ) { $sum += $v; } }
+        }
+        $base = -0.5 * $sum;
+    }
+    return array( $model, $base );
+}
+
+/** 文節に分割する。モデルが読めないときは分割しない（＝従来動作にフォールバック） */
+function preworks_budoux_parse( $text ) {
+    list( $m, $base ) = preworks_budoux_model();
+    $c = preg_split( '//u', (string) $text, -1, PREG_SPLIT_NO_EMPTY );
+    if ( ! $c ) { return array(); }
+    if ( ! $m ) { return array( (string) $text ); }
+    $n   = count( $c );
+    $res = array();
+    $cur = $c[0];
+    for ( $i = 1; $i < $n; $i++ ) {
+        $s = $base;
+        if ( $i - 3 >= 0 && isset( $m['UW1'][ $c[$i-3] ] ) ) { $s += $m['UW1'][ $c[$i-3] ]; }
+        if ( $i - 2 >= 0 && isset( $m['UW2'][ $c[$i-2] ] ) ) { $s += $m['UW2'][ $c[$i-2] ]; }
+        if ( isset( $m['UW3'][ $c[$i-1] ] ) ) { $s += $m['UW3'][ $c[$i-1] ]; }
+        if ( isset( $m['UW4'][ $c[$i] ] ) )   { $s += $m['UW4'][ $c[$i] ]; }
+        if ( $i + 1 < $n && isset( $m['UW5'][ $c[$i+1] ] ) ) { $s += $m['UW5'][ $c[$i+1] ]; }
+        if ( $i + 2 < $n && isset( $m['UW6'][ $c[$i+2] ] ) ) { $s += $m['UW6'][ $c[$i+2] ]; }
+        if ( $i - 2 >= 0 ) { $k = $c[$i-2] . $c[$i-1]; if ( isset( $m['BW1'][ $k ] ) ) { $s += $m['BW1'][ $k ]; } }
+        $k = $c[$i-1] . $c[$i]; if ( isset( $m['BW2'][ $k ] ) ) { $s += $m['BW2'][ $k ]; }
+        if ( $i + 1 < $n ) { $k = $c[$i] . $c[$i+1]; if ( isset( $m['BW3'][ $k ] ) ) { $s += $m['BW3'][ $k ]; } }
+        if ( $i - 3 >= 0 ) { $k = $c[$i-3] . $c[$i-2] . $c[$i-1]; if ( isset( $m['TW1'][ $k ] ) ) { $s += $m['TW1'][ $k ]; } }
+        if ( $i - 2 >= 0 ) { $k = $c[$i-2] . $c[$i-1] . $c[$i]; if ( isset( $m['TW2'][ $k ] ) ) { $s += $m['TW2'][ $k ]; } }
+        if ( $i + 1 < $n ) { $k = $c[$i-1] . $c[$i] . $c[$i+1]; if ( isset( $m['TW3'][ $k ] ) ) { $s += $m['TW3'][ $k ]; } }
+        if ( $i + 2 < $n ) { $k = $c[$i] . $c[$i+1] . $c[$i+2]; if ( isset( $m['TW4'][ $k ] ) ) { $s += $m['TW4'][ $k ]; } }
+        if ( $s > 0 ) { $res[] = $cur; $cur = ''; }
+        $cur .= $c[$i];
+    }
+    if ( '' !== $cur ) { $res[] = $cur; }
+    return $res;
+}
+
+/** 文字種。K=漢字 C=カタカナ H=ひらがな A=英数 X=記号・句読点 */
+function preworks_char_class( $ch ) {
+    // ヶ・ヵ は「2ヶ月」のように助数詞として使われる。カタカナ扱いにすると
+    // 「12ヶ／月」で切れてしまうので漢字と同じ扱いにする。
+    if ( preg_match( '/^[\x{4E00}-\x{9FFF}\x{3005}\x{3007}\x{303B}\x{30F5}\x{30F6}\x{F900}-\x{FAFF}]$/u', $ch ) ) { return 'K'; }
+    // 30FB（・）は除外する。カタカナ扱いすると「見出し／・／中央寄せ」と分断される
+    if ( preg_match( '/^[\x{30A1}-\x{30F4}\x{30F7}-\x{30FA}\x{30FC}-\x{30FF}]$/u', $ch ) ) { return 'C'; }
+    if ( preg_match( '/^[\x{3041}-\x{309F}]$/u', $ch ) ) { return 'H'; }
+    if ( preg_match( '/^[0-9A-Za-z\x{FF10}-\x{FF19}\x{FF21}-\x{FF3A}\x{FF41}-\x{FF5A}]$/u', $ch ) ) { return 'A'; }
+    return 'X';
+}
+
+/** 長い文節を文字種の変わり目でさらに割る。
+ * ⚠️ ひらがなの前では絶対に切らない。漢字＋ひらがなは送り仮名（見出し／読みやすい）
+ *    か助詞（金額を）なので、切ると「見出／し」という不自然な改行になる。
+ *    切ってよいのは漢字・カタカナ・英数が始まる位置だけ。
+ * ⚠️ 記号・句読点は直前の単位にくっつける（行頭に「・」「。」が来ないように）。 */
+function preworks_script_runs( $s ) {
+    $c = preg_split( '//u', (string) $s, -1, PREG_SPLIT_NO_EMPTY );
+    if ( ! $c ) { return array(); }
+    $runs = array(); $cur = ''; $prev = null; $prevCh = '';
+    foreach ( $c as $ch ) {
+        $cl = preworks_char_class( $ch );
+        if ( 'X' === $cl ) { $cur .= $ch; $prevCh = $ch; continue; }
+        /* 数字・英字のすぐあとに漢字やカタカナが続く形は「数量＋単位」が
+         * ほとんど（55,000円／12ヶ月／140社／3大特典）。ここで切ると数字と
+         * 単位が別の行に分かれて読めなくなるので切らない。
+         * ⚠️ 直前の1文字が英数字のときだけ。間に空白や記号があるときは切る
+         *    （「preworks 修了生の声」を1つの塊にしてしまわないため）。 */
+        $numUnit = ( 'A' === $prev && ( 'K' === $cl || 'C' === $cl )
+                     && preg_match( '/^[0-9A-Za-z]$/', $prevCh ) );
+        if ( null !== $prev && $cl !== $prev && 'H' !== $cl && ! $numUnit && '' !== $cur ) {
+            $runs[] = $cur; $cur = '';
+        }
+        $cur .= $ch; $prev = $cl; $prevCh = $ch;
+    }
+    if ( '' !== $cur ) { $runs[] = $cur; }
+
+    /* 1文字だけの単位は前の単位にくっつける（前が無ければ次に）。
+     * これが無いと「55,000／円」「横／スクロールします）」のように
+     * 1文字が行頭・行末に取り残される。数字と単位が離れるのは特に読みにくい。 */
+    $merged = array();
+    foreach ( $runs as $r ) {
+        if ( 1 === mb_strlen( $r, 'UTF-8' ) && $merged ) {
+            $merged[ count( $merged ) - 1 ] .= $r;
+        } else {
+            $merged[] = $r;
+        }
+    }
+    if ( count( $merged ) > 1 && 1 === mb_strlen( $merged[0], 'UTF-8' ) ) {
+        $head = array_shift( $merged );
+        $merged[0] = $head . $merged[0];
+    }
+    return $merged;
+}
+
+/** 折り返してよい単位の配列。$maxlen を超える文節だけ文字種で細分化する */
+function preworks_break_units( $text, $maxlen = 8 ) {
+    $out = array();
+    foreach ( preworks_budoux_parse( $text ) as $ph ) {
+        if ( mb_strlen( $ph, 'UTF-8' ) <= $maxlen ) { $out[] = $ph; continue; }
+        foreach ( preworks_script_runs( $ph ) as $r ) { $out[] = $r; }
+    }
+    /* 1文字だけの単位は前にくっつける。BudouX は「修了生の／声」「分割払い／可」
+     * 「確認していただきたい／点」のように1文字を独立した文節にすることがあり、
+     * そのままだと行頭に1文字だけ残る。 */
+    $m = array();
+    foreach ( $out as $u ) {
+        if ( 1 === mb_strlen( $u, 'UTF-8' ) && $m ) { $m[ count( $m ) - 1 ] .= $u; }
+        else { $m[] = $u; }
+    }
+    return $m;
+}
+
+/** テキスト1片に <wbr> を入れる。実体参照（&amp; など）は壊さない */
+function preworks_wbr_text( $t ) {
+    $ents = array();
+    $t = preg_replace_callback(
+        '/&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);/',
+        function ( $m ) use ( &$ents ) { $ents[] = $m[0]; return "\xEE\x80\x80"; }, // U+E000
+        (string) $t
+    );
+    $s = implode( '<wbr>', preworks_break_units( $t, 8 ) );
+    if ( $ents ) {
+        $i = 0;
+        $s = preg_replace_callback( '/\x{E000}/u', function () use ( &$i, $ents ) {
+            return isset( $ents[ $i ] ) ? $ents[ $i++ ] : '';
+        }, $s );
+    }
+    return $s;
+}
+
+/** HTML の文字部分だけに <wbr> を入れる。タグの内側は触らない
+ *  （リンクのURLに日本語が入っていても壊さない） */
+function preworks_phrase_wbr( $html ) {
     $parts = preg_split( '/(<[^>]*>)/u', (string) $html, -1, PREG_SPLIT_DELIM_CAPTURE );
-    if ( ! $parts ) return $html;
+    if ( ! $parts ) { return $html; }
     $out = '';
     foreach ( $parts as $p ) {
-        if ( '' === $p ) continue;
+        if ( '' === $p ) { continue; }
         if ( '<' === $p[0] ) { $out .= $p; continue; }
-        // 前後がカタカナでないことを条件にする。これが無いと {2,12} が貪欲に働き、
-        // 15文字の語が「12文字＋3文字」の2つに分割されて上限の意味が無くなる。
-        // この形なら13文字以上の語はどこにも一致せず、まったく包まれない。
-        $out .= preg_replace(
-            '/(?<![\x{30A1}-\x{30FA}\x{30FC}])([\x{30A1}-\x{30FA}\x{30FC}]{2,12})(?![\x{30A1}-\x{30FA}\x{30FC}])/u',
-            '<span class="nobr">$1</span>', $p );
+        $out .= preworks_wbr_text( $p );
     }
     return $out;
 }
-// 装飾＋カタカナ保護。本文・リード文の出力はこれを通す
+
+/** 1.3.53〜1.3.60 の名前。呼び出し側互換のために残す（中身は 1.3.61 の実装） */
+function preworks_kana_nobr( $html ) {
+    return preworks_phrase_wbr( $html );
+}
+
+// 装飾＋折り返し位置の埋め込み。本文・リード文・見出しの出力はこれを通す
 function preworks_deco_nobr( $s ) {
-    return preworks_kana_nobr( preworks_inline_deco( $s ) );
+    return preworks_phrase_wbr( preworks_inline_deco( $s ) );
 }
 
 function preworks_render_lead( $text ) {
@@ -1877,7 +2040,7 @@ function preworks_render_blog_body( $text ) {
     if ( count( $toc ) >= 2 ) {
         $li = '';
         // 目次にもカタカナ保護をかける。v1.3.59（上の preworks_content_toc と同じ理由）
-        foreach ( $toc as $it ) { $li .= '<li class="toc-l' . $it[0] . '"><a href="#' . esc_attr( $it[1] ) . '">' . preworks_kana_nobr( esc_html( $it[2] ) ) . '</a></li>'; }
+        foreach ( $toc as $it ) { $li .= '<li class="toc-l' . $it[0] . '"><a href="#' . esc_attr( $it[1] ) . '">' . preworks_phrase_wbr( esc_html( $it[2] ) ) . '</a></li>'; }
         $tochtml = preworks_toc_box( $li, count( $toc ) );
     }
     return $tochtml . $out;

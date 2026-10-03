@@ -1863,3 +1863,45 @@ a.btn-more{display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
  * ========================================================================= */
 .blog-preview{background:var(--bg2);}
 .mentors + .faq{background:var(--bg2);}
+
+
+/* =========================================================================
+ * 1.0.28  ブログ記事の折り返しを文節単位にする（坂さん依頼 9/24・FIX承認 9/28）
+ *
+ * PHP 側（preworks_phrase_wbr）が文節の境目に <wbr> を埋め込む。
+ * ここで word-break:keep-all にすることで「<wbr> と句読点以外では折り返さない」
+ * 状態になり、iOS Safari でも Chrome の auto-phrase と同じ位置で折り返る。
+ *
+ * これまで h1〜h4 と .lead には word-break:auto-phrase が指定されていたが
+ * Chrome 専用機能で、iOS Safari では効かず文字単位に落ちていた。坂さんの端末で
+ * 「共通デザイ／ンの確認用」「すべてダ／ミーです」が発生していた原因。
+ *
+ * ⚠️ keep-all を外すと <wbr> は「追加候補」にしかならず、従来どおり文字単位で
+ *    折り返してしまう。PHP 側とセットでなければ意味が無い。
+ * ⚠️ overflow-wrap:anywhere は必須。1文節が1行に入らない幅（端末の文字拡大や
+ *    14文字のカタカナ語）でも横スクロールを出さないための逃げ道。
+ * ⚠️ text-wrap:wrap でテーマ12行目の balance を解除する。balance が効くと
+ *    1行目が意図的に短くされ「1行目に余白が残る」状態になる。
+ * ⚠️ 適用範囲は .post-body（ブログ記事）だけ。トップページ・LP・下層ページは
+ *    坂さんの依頼範囲外なので触っていない。
+ *
+ * 実測（iPhone 16・393px）：リード文のフォントを 16/21/24/28/32px に変えても
+ * 語の途中割れゼロ・横スクロールなし。坂さんの端末は約21px相当。
+ * ========================================================================= */
+.post-body .lead,.post-body .lead p,
+.post-body h2,.post-body h3,
+.post-body .post-toc a,.post-body p,.post-body li,
+.post-body .point,.post-body .note,.post-body blockquote p
+{word-break:keep-all;overflow-wrap:anywhere;text-wrap:wrap;}
+
+/* 表は対象外。坂さん「テーブルは問題ない」。keep-all にするとセルが広がって
+ * 横スクロール量が増える。PHP 側も table の中には <wbr> を入れていない。 */
+.post-body table,
+.post-body table th,
+.post-body table td,
+.post-body table caption{word-break:normal;overflow-wrap:break-word;text-wrap:wrap;}
+
+/* 1.0.22〜1.0.27 のカタカナ保護（.nobr）の打ち消し。PHP 側が <span class="nobr">
+ * を出さなくなったので実害は無いが、キャッシュされた古いHTMLが残っていても
+ * 効かないようにしておく。上の .nobr{white-space:nowrap} より後ろに置くこと。 */
+.post-body .nobr,.post-body .post-toc .nobr{white-space:normal;}
