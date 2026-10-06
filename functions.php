@@ -4,6 +4,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // テーマ画像ディレクトリ
 define( 'PREWORKS_IMG', get_template_directory_uri() . '/assets/img' );
 
+// SEOページ基盤（共通データ・ページ登録表・表示部品）v2.0.0
+require_once get_template_directory() . '/inc/pw-data.php';
+require_once get_template_directory() . '/inc/pw-pages.php';
+require_once get_template_directory() . '/inc/pw-core.php';
+require_once get_template_directory() . '/inc/pw-guide.php';
+
 function preworks_setup() {
     add_theme_support( 'title-tag' );
     add_theme_support( 'post-thumbnails' );
@@ -68,8 +74,10 @@ function preworks_jsonld() {
     echo '<script type="application/ld+json">' . wp_json_encode( array(
         '@context' => 'https://schema.org',
         '@type'    => 'Organization',
-        'name'     => 'オンライン秘書養成講座 Preworks（LISH株式会社）',
-        'url'      => $home,
+        // v2.0.0：SEOページの構造化データ（pw_org_node）と同じ組織として出力する
+        '@id'      => function_exists( 'pw' ) ? pw( 'company_url' ) . '#organization' : home_url( '/company/#organization' ),
+        'name'     => function_exists( 'pw' ) ? pw( 'company' ) : 'LISH株式会社',
+        'url'      => function_exists( 'pw' ) ? pw( 'company_url' ) : home_url( '/company/' ),
         'logo'     => PREWORKS_IMG . '/logo.png',
     ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 }
@@ -347,13 +355,18 @@ function preworks_voice_metabox_html( $post ) {
     echo '<input type="text" name="pw_hl" value="' . esc_attr( $hl ) . '" ' . $s . '>';
     echo '<label>コメント <span class="hint">（ハイライトの下の説明文）</span></label>';
     echo '<textarea name="pw_comment" rows="2" ' . $s . '>' . esc_textarea( $comment ) . '</textarea>';
+    // v2.0.0：修了生の声一覧（/voice/）のカードに出す項目。本人了承が取れるまで一般には表示されない（pw-data.php の confirm.voice_card_info）
+    echo '<label>受講プラン <span class="hint">（例：6ヶ月プラン）</span></label>';
+    echo '<input type="text" name="pw_plan" value="' . esc_attr( get_post_meta( $post->ID, '_pw_plan', true ) ) . '" ' . $s . '>';
+    echo '<label>現在の仕事 <span class="hint">（例：URAKATA＋業務委託契約1社）</span></label>';
+    echo '<input type="text" name="pw_job" value="' . esc_attr( get_post_meta( $post->ID, '_pw_job', true ) ) . '" ' . $s . '>';
     echo '</div>';
 }
 function preworks_voice_save( $post_id ) {
     if ( ! isset( $_POST['preworks_voice_nonce'] ) || ! wp_verify_nonce( $_POST['preworks_voice_nonce'], 'preworks_voice_save' ) ) return;
     if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
     if ( ! current_user_can( 'edit_post', $post_id ) ) return;
-    $text = array( 'pw_catch' => '_pw_catch', 'pw_youtube' => '_pw_youtube', 'pw_attr' => '_pw_attr', 'pw_hl' => '_pw_hl', 'pw_name_l' => '_pw_name_l', 'pw_name_r' => '_pw_name_r' );
+    $text = array( 'pw_catch' => '_pw_catch', 'pw_youtube' => '_pw_youtube', 'pw_attr' => '_pw_attr', 'pw_hl' => '_pw_hl', 'pw_name_l' => '_pw_name_l', 'pw_name_r' => '_pw_name_r', 'pw_plan' => '_pw_plan', 'pw_job' => '_pw_job' );
     foreach ( $text as $k => $m ) {
         if ( isset( $_POST[ $k ] ) ) update_post_meta( $post_id, $m, sanitize_text_field( wp_unslash( $_POST[ $k ] ) ) );
     }
@@ -393,8 +406,14 @@ function preworks_inline_deco( $s ) {
     $s = preg_replace( '/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $s );
     $s = preg_replace( '/__(.+?)__/u', '<u>$1</u>', $s );
     $s = preg_replace( '/==(.+?)==/u', '<mark>$1</mark>', $s );
-    $s = preg_replace_callback( '/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/u', function ( $m ) {
-        return '<a href="' . esc_url( $m[2] ) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
+    // v2.0.0：「/guide/skills/」のようなサイト内リンク（/始まり）も書けるようにし、サイト内リンクは同じタブで開く
+    $s = preg_replace_callback( '/\[(.+?)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/u', function ( $m ) {
+        $url      = $m[2];
+        $internal = ( strpos( $url, '/' ) === 0 ) || ( strpos( $url, home_url() ) === 0 );
+        if ( strpos( $url, '/' ) === 0 ) $url = home_url( $url );
+        return $internal
+            ? '<a href="' . esc_url( $url ) . '">' . $m[1] . '</a>'
+            : '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
     }, $s );
     return $s;
 }
@@ -982,6 +1001,12 @@ function preworks_ogp() {
     if ( is_singular() ) {
         $e = wp_strip_all_tags( get_the_excerpt() );
         if ( $e ) { $desc = mb_substr( $e, 0, 120 ); }
+    }
+    // SEOページ登録表のページは、登録表の description と URL を使う
+    if ( function_exists( 'pw_current_description' ) && pw_current_description() !== '' ) {
+        $desc = pw_current_description();
+        $pw_s = pw_current_slug();
+        $url  = ( $pw_s === 'home' ) ? home_url( '/' ) : pw_url( $pw_s );
     }
     echo '<meta property="og:locale" content="ja_JP">' . "\n";
     echo '<meta property="og:type" content="' . ( is_front_page() ? 'website' : 'article' ) . '">' . "\n";
@@ -2013,11 +2038,17 @@ function preworks_render_blog_body( $text ) {
         // 表題を書いたのに表が続かなかった場合は捨てる（間の空行はまたぐ）
         if ( $t !== '' ) { $tblcap = ''; }
         if ( $t === '' ) { $flushList(); $flushPara(); continue; }
+        // 【要確認：◯◯】で始まる行は、ログイン中の編集者にだけ赤字で表示（一般には出さない）。v2.0.0
+        if ( mb_strpos( $t, '【要確認' ) === 0 ) {
+            $flushList(); $flushPara();
+            if ( current_user_can( 'edit_posts' ) ) $out .= '<p class="pw-tbc-line">' . esc_html( $t ) . '</p>';
+            continue;
+        }
         if ( mb_substr( $t, 0, 1 ) === '■' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 2, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h2 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h2>'; continue; }
         if ( mb_substr( $t, 0, 1 ) === '□' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 3, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h3 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h3>'; continue; }
         if ( preg_match( '/^【ポイント】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="point">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
         if ( preg_match( '/^【注意】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="note">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
-        if ( preg_match( '/^\[LINE\]$/ui', $t ) ) { $flushList(); $flushPara(); $out .= do_shortcode( '[line_cta]' ); continue; }
+        if ( preg_match( '/^\[LINE\]$/ui', $t ) ) { $flushList(); $flushPara(); $out .= ( function_exists( 'pw_is_guide_post' ) && is_singular( 'post' ) && pw_is_guide_post( get_queried_object_id() ) ) ? do_shortcode( '[line_cta lead="オンライン秘書として働く準備を、無料オンライン相談で一緒に整理しませんか？"]' ) : do_shortcode( '[line_cta]' ); continue; }
         if ( mb_substr( $t, 0, 1 ) === '>' || mb_substr( $t, 0, 1 ) === '＞' ) { $flushList(); $flushPara(); $out .= '<blockquote><p>' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</p></blockquote>'; continue; }
         // [画像:URL] / [画像:URL|代替テキスト] / [画像:URL|代替テキスト|キャプション]
         if ( preg_match( '/^\[画像[:：]\s*([^\s|｜\]]+)\s*(?:[|｜]\s*([^|｜\]]*?)\s*)?(?:[|｜]\s*([^|｜\]]*?)\s*)?\]$/u', $t, $m ) ) {
@@ -2167,6 +2198,11 @@ function preworks_page_descriptions() {
 
 // ページ種別ごとのフォールバック説明文
 function preworks_fallback_description() {
+    // SEOページ登録表（inc/pw-pages.php）にあるページは、そこの description を使う
+    if ( function_exists( 'pw_current_description' ) ) {
+        $pw_d = pw_current_description();
+        if ( $pw_d !== '' ) return $pw_d;
+    }
     // ブログ記事
     if ( is_singular( 'post' ) ) {
         $id   = get_queried_object_id();

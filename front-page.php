@@ -1,4 +1,22 @@
-<?php get_header(); ?>
+<?php
+/**
+ * TOP（S01）
+ * v2.0.0 SEO改修：構成・コピーは維持し、各セクション末尾に下層ページへの「詳しく見る」リンクを追加。
+ * 実績数値・料金は inc/pw-data.php から出力する（直書きしない）。
+ */
+get_header();
+
+/* セクション末尾の「詳しく見る →」リンク。
+ * リンク先が未公開のあいだは一般には何も出さない（管理者には点線リンクで見える）。
+ * $live を渡すと pw_is_live() の代わりにその条件で出し分ける（/voice/・/mentor/ 用）。 */
+$pw_more = function( $slug, $text, $live = null ) {
+    $live = ( $live === null ) ? pw_is_live( $slug ) : $live;
+    if ( ! $live && ! pw_is_editor() ) return;
+    $cls = $live ? '' : ' class="pw-unpub"';
+    echo '<p class="pw-more center" style="margin-top:28px;font-weight:700;"><a href="' . esc_url( pw_url( $slug ) ) . '"' . $cls . ' style="color:var(--terra);text-underline-offset:4px;">' . esc_html( $text ) . ' →</a></p>';
+};
+$pw_jobrate = pw( 'stats.job_rate' );
+?>
 <main>
 
 
@@ -9,7 +27,7 @@
       <div class="hero-copy">
         <h1><span class="h1-prog h1-prog-top">オンライン秘書講座</span>未経験から最短2ヵ月で<br><span class="accent">在宅ワークデビュー！</span></h1>
         <div class="hero-strengths">
-          <div class="hs-card"><div class="hs-ic"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8h14v7a7 7 0 0 1-14 0V8Z"/><path d="M13 10.5H9.5a3 3 0 0 0 3.5 3.4"/><path d="M27 10.5h3.5a3 3 0 0 1-3.5 3.4"/><path d="M20 22v5"/><path d="M15 32c0-2.8 2.2-4.8 5-4.8s5 2 5 4.8H15Z"/></svg></div><p class="hs-sm">修了生の</p><p class="hs-lg hs-rate">お仕事獲得率100%</p></div>
+          <div class="hs-card"><div class="hs-ic"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8h14v7a7 7 0 0 1-14 0V8Z"/><path d="M13 10.5H9.5a3 3 0 0 0 3.5 3.4"/><path d="M27 10.5h3.5a3 3 0 0 1-3.5 3.4"/><path d="M20 22v5"/><path d="M15 32c0-2.8 2.2-4.8 5-4.8s5 2 5 4.8H15Z"/></svg></div><p class="hs-sm">修了生の</p><p class="hs-lg hs-rate">お仕事獲得率<?php echo (int) $pw_jobrate['value']; ?>%</p></div>
           <div class="hs-card"><div class="hs-ic"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="11" width="20" height="14" rx="2.4"/><path d="M6 29h28l-2.4-3.2H8.4L6 29Z"/></svg></div><p class="hs-sm">受講中から</p><p class="hs-lg">実際の秘書業務に<br>携われる！</p></div>
           <div class="hs-card"><div class="hs-ic"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="7" width="16" height="26" rx="2.4"/><path d="M17 13h2m3 0h2M17 18h2m3 0h2M17 23h2m3 0h2"/><path d="M18 33v-4.5h4V33"/></svg></div><p class="hs-sm">運営会社が監修した</p><p class="hs-lg">超実践型<br>カリキュラム</p></div>
         </div>
@@ -38,7 +56,7 @@
             <div class="cmp-flow">
               <span class="cmp-box">座学で知識を学ぶ</span>
               <span class="cmp-arw">→</span>
-              <span class="cmp-box">自分で仕事探し</span>
+              <span class="cmp-box">実績なしで仕事探し</span>
               <span class="cmp-arw">→</span>
               <span class="cmp-box cmp-q">？</span>
             </div>
@@ -48,14 +66,15 @@
             <div class="cmp-flow">
               <span class="cmp-box">知識＋実務を学ぶ</span>
               <span class="cmp-arw">→</span>
-              <span class="cmp-box">URAKATA面接</span>
+              <span class="cmp-box">実務経験・実績をつくる</span>
               <span class="cmp-arw">→</span>
-              <span class="cmp-box cmp-goal">仕事開始</span>
+              <span class="cmp-box cmp-goal">自分に合う働き方で仕事開始</span>
             </div>
           </div>
         </div>
-        <p class="compare-note">オンライン秘書サービス「URAKATA」の案件に挑戦できる機会を通じて、学びを実際の仕事につなげる環境を提供します。</p>
+        <p class="compare-note">受講中はオンライン秘書サービス「URAKATA」の案件で実務経験と実績をつくれます。修了後はURAKATAで続けることも、自分で案件を獲得することもできます。</p>
       </div>
+      <?php $pw_more( 'about', 'preworksについて詳しく見る' ); ?>
     </div>
   </section>
 
@@ -87,9 +106,10 @@
         <span class="sv-shot-cap">オンライン秘書サービス「URAKATA」公式サイト　↗</span>
       </a>
       <div class="nums">
-        <div class="nstat reveal"><div class="v"><span class="count" data-to="140">0</span><span class="u">社</span></div><div class="lbl">URAKATA 導入企業数</div><div class="note">※2026年7月時点</div></div>
-        <div class="nstat reveal"><div class="v"><span class="count" data-to="114">0</span><span class="u">名</span></div><div class="lbl">在籍オンライン秘書数</div><div class="note">※2026年3月時点</div></div>
-        <div class="nstat reveal"><div class="v"><span class="count" data-to="100">0</span><span class="u">%</span></div><div class="lbl">preworks 修了生のお仕事獲得率</div><div class="note">※2026年7月時点・修了生6名中6名</div></div>
+        <?php /* v2.0.0 HTMLには最初から実数を出力（data-to と同じ値）。カウントアップ演出は main.js が0から数える。 */
+        foreach ( array( 'urakata_companies', 'secretaries', 'job_rate' ) as $pw_k ) : $pw_s = pw( 'stats.' . $pw_k ); if ( ! $pw_s ) continue; ?>
+        <div class="nstat reveal"><div class="v"><span class="count" data-to="<?php echo (int) $pw_s['value']; ?>"><?php echo number_format( $pw_s['value'] ); ?></span><span class="u"><?php echo esc_html( $pw_s['unit'] ); ?></span></div><div class="lbl"><?php echo esc_html( $pw_s['label'] ); ?></div><div class="note">※<?php echo esc_html( $pw_s['as_of'] ); ?></div></div>
+        <?php endforeach; ?>
       </div>
     </div>
   </section>
@@ -107,6 +127,7 @@
         <div class="wcard reveal"><div class="n">04</div><p>フルタイム勤務を続けるのが体力的にしんどい。家族と過ごす時間を増やしたい。</p></div>
       </div>
       <p class="closing reveal">ひとつでも当てはまったら<br><span class="mk">preworksで、理想の働き方への準備をはじめませんか？</span></p>
+      <?php $pw_more( 'for-mama', '子育て中の方へのご案内を見る' ); ?>
     </div>
   </section>
 
@@ -114,11 +135,11 @@
   <section class="reasons sec-pad">
     <span class="orb l ring" style="top:60px;left:-200px;"></span>
     <div class="wrap">
-      <div class="headblock left reveal"><span class="eyebrow">Why preworks</span><h2 class="htitle">preworksが選ばれる<span class="mk">3つの理由</span></h2></div>
+      <div class="headblock left reveal"><span class="eyebrow">Why preworks</span><h2 class="htitle">preworksが選ばれる<span class="mk">3つの理由</span></h2><p class="subhead">preworksは、オンライン秘書サービス「URAKATA」を運営する<?php echo esc_html( pw( 'company' ) ); ?>が、自社の採用・育成の現場で必要とされるスキルをもとにつくった講座です。</p></div>
       <div class="rlist">
         <div class="ritem reveal"><div class="num mincho">01</div><div class="r-txt"><div class="tag">実践カリキュラム</div><h3>オンライン秘書として働くための実践カリキュラム</h3><p>オンライン秘書を育成・採用してきた経験をもとに、実際の仕事で必要なスキルだけを厳選しています。</p></div><img class="r-ph" src="<?php echo PREWORKS_IMG; ?>/feature-1.jpg" alt="実践カリキュラムで学ぶ様子"></div>
         <div class="ritem reveal"><div class="num mincho">02</div><div class="r-txt"><div class="tag">1on1サポート</div><h3>現役オンライン秘書が1on1でサポート</h3><p>月2回のメンター面談とチャット相談で、分からないことをすぐに相談できる環境です。</p></div><img class="r-ph" src="<?php echo PREWORKS_IMG; ?>/process-2.jpg" alt="現役オンライン秘書が1on1でサポート"></div>
-        <div class="ritem reveal"><div class="num mincho">03</div><div class="r-txt"><div class="tag">実践機会</div><h3>学んだ後の実践機会まで用意</h3><p>受講中に提携オンライン秘書サービス「URAKATA」の案件をご紹介。報酬を得ながら、実際の仕事で実務経験を積んでいただけます。</p></div><img class="r-ph" src="<?php echo PREWORKS_IMG; ?>/case-3.jpg" alt="受講中からURAKATA案件で実務経験"></div>
+        <div class="ritem reveal"><div class="num mincho">03</div><div class="r-txt"><div class="tag">実践機会</div><h3>学んだ後の実践機会まで用意</h3><p>受講中にオンライン秘書サービス「URAKATA」の案件をご紹介。報酬を得ながら、実際の仕事で実務経験と実績を積んでいただけます。修了後はURAKATAで続けることも、その経験を武器に自分で案件を獲得することもできます。</p><?php if ( pw_is_live( 'career' ) || pw_is_editor() ) : ?><p class="pw-more" style="margin-top:10px;font-weight:700;color:var(--terra);"><?php echo pw_a( 'career', '修了後の働き方・案件の探し方について →' ); ?></p><?php endif; ?></div><img class="r-ph" src="<?php echo PREWORKS_IMG; ?>/case-3.jpg" alt="受講中からURAKATA案件で実務経験"></div>
       </div>
     </div>
   </section>
@@ -130,7 +151,7 @@
   <section class="clients sec-pad">
     <div class="wrap">
       <div class="headblock reveal"><span class="eyebrow">Track record</span><h2 class="htitle">preworksの実務基盤<span class="mk">「URAKATA」導入企業</span></h2></div>
-      <div class="urakata-card reveal"><div class="uc-logo"><img src="<?php echo PREWORKS_IMG; ?>/urakata-logo.png" alt="URAKATA ロゴ"></div><p class="uc-desc">オンライン秘書サービス「URAKATA」は、140社以上の企業のバックオフィスを支えています。</p></div>
+      <div class="urakata-card reveal"><div class="uc-logo"><img src="<?php echo PREWORKS_IMG; ?>/urakata-logo.png" alt="URAKATA ロゴ"></div><p class="uc-desc">オンライン秘書サービス「URAKATA」は、<?php echo esc_html( pw_stat( 'urakata_companies', false ) ); ?>の企業のバックオフィスを支えています。</p></div>
       <div class="logo-marquee"><div class="logo-track"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-01.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-02.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-03.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-04.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-05.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-06.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-07.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-08.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-09.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-10.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-11.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-12.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-01.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-02.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-03.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-04.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-05.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-06.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-07.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-08.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-09.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-10.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-11.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-12.png" alt="導入企業ロゴ"></div><div class="logo-track row2"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-13.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-14.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-15.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-16.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-17.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-18.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-19.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-20.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-21.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-22.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-23.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-13.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-14.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-15.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-16.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-17.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-18.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-19.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-20.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-21.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-22.png" alt="導入企業ロゴ"><img src="<?php echo PREWORKS_IMG; ?>/logos/brand-23.png" alt="導入企業ロゴ"></div></div>
       <p class="logo-note reveal">※ オンライン秘書サービス「URAKATA」導入企業の一部（敬称略）</p>
     </div>
@@ -149,14 +170,16 @@
       <div class="plantable reveal">
         <div class="pt-head"><h3 class="htitle">プラン別<span class="mk">サポート内容</span></h3></div>
         <div class="pt-scroll"><table>
-          <thead><tr><th></th><th>2ヶ月プラン</th><th>3ヶ月プラン</th><th class="reco">6ヶ月プラン<span class="rb">おすすめ</span></th><th>12ヶ月プラン</th></tr></thead>
+<?php $pw_plans = pw( 'plans' ); $pw_n = count( $pw_plans );
+            $pw_td = function( $pl, $html ) { return '<td' . ( $pl['reco'] ? ' class="reco"' : '' ) . '>' . $html . '</td>'; }; ?>
+          <thead><tr><th></th><?php foreach ( $pw_plans as $pl ) : ?><th<?php echo $pl['reco'] ? ' class="reco"' : ''; ?>><?php echo (int) $pl['months']; ?>ヶ月プラン<?php if ( $pl['reco'] ) : ?><span class="rb">おすすめ</span><?php endif; ?></th><?php endforeach; ?></tr></thead>
           <tbody>
-            <tr><th>メンター伴走期間<br>質問し放題</th><td>2ヶ月</td><td>3ヶ月</td><td class="reco">6ヶ月</td><td>12ヶ月</td></tr>
-            <tr><th>動画視聴</th><td>無期限</td><td>無期限</td><td class="reco">無期限</td><td>無期限</td></tr>
-            <tr><th>メンター面談</th><td>4回（月2回）</td><td>6回（月2回）</td><td class="reco">12回（月2回）</td><td>24回（月2回）</td></tr>
-            <tr><th>面接シミュレーション</th><td colspan="4">1回</td></tr>
-            <tr><th>URAKATAプレ稼働</th><td colspan="4">収入を得ながら稼働可能<small>※希望者は面接通過後URAKATAで継続稼働可能</small></td></tr>
-            <tr><th>案件獲得伴走サポート</th><td>×</td><td>○</td><td class="reco">○</td><td>○</td></tr>
+            <tr><th>メンター伴走期間<br>質問し放題</th><?php foreach ( $pw_plans as $pl ) echo $pw_td( $pl, (int) $pl['months'] . 'ヶ月' ); ?></tr>
+            <tr><th>動画視聴</th><?php foreach ( $pw_plans as $pl ) echo $pw_td( $pl, '無期限' ); ?></tr>
+            <tr><th>メンター面談</th><?php foreach ( $pw_plans as $pl ) echo $pw_td( $pl, (int) $pl['sessions'] . '回（月2回）' ); ?></tr>
+            <tr><th>面接シミュレーション</th><td colspan="<?php echo (int) $pw_n; ?>">1回</td></tr>
+            <tr><th>URAKATAプレ稼働</th><td colspan="<?php echo (int) $pw_n; ?>">収入を得ながら稼働可能<small>※希望者は面接通過後URAKATAで継続稼働可能</small></td></tr>
+            <tr><th>案件獲得伴走サポート</th><?php foreach ( $pw_plans as $pl ) echo $pw_td( $pl, $pl['support'] ? '○' : '×' ); ?></tr>
           </tbody>
         </table></div>
       </div>
@@ -263,17 +286,18 @@
             </div>
           </details>
         </div>
+        <?php $pw_more( 'program', 'カリキュラムの詳細を見る' ); ?>
       </div>
-      <div class="plans-block">
+      <div class="plans-block" id="plans">
         <div class="mod-head"><span class="nb">Plans</span><h3 class="htitle" style="margin-top:12px;">サービスプラン</h3></div>
         <div class="plans">
-          <div class="plan reveal"><div class="term">2<span class="u">ヶ月</span></div><div class="model">学習定着プラン</div><div class="price"><span class="ps-label">24回分割</span>約6,900<small>円/月</small></div><div class="price-lump">一括 165,000円（税込）</div></div>
-          <div class="plan reveal"><div class="term">3<span class="u">ヶ月</span></div><div class="model">初案件チャレンジプラン</div><div class="price"><span class="ps-label">24回分割</span>約9,200<small>円/月</small></div><div class="price-lump">一括 220,000円（税込）</div></div>
-          <div class="plan reco reveal"><span class="badge">おすすめ</span><div class="term">6<span class="u">ヶ月</span></div><div class="model">自走化サポートプラン</div><div class="price"><span class="ps-label">24回分割</span>約16,100<small>円/月</small></div><div class="price-lump">一括 385,000円（税込）</div></div>
-          <div class="plan reveal"><div class="term">12<span class="u">ヶ月</span></div><div class="model">完全自立サポートプラン</div><div class="price"><span class="ps-label">24回分割</span>約27,500<small>円/月</small></div><div class="price-lump">一括 660,000円（税込）</div></div>
+          <?php foreach ( pw( 'plans' ) as $pl ) : ?>
+          <div class="plan<?php echo $pl['reco'] ? ' reco' : ''; ?> reveal"><?php if ( $pl['reco'] ) : ?><span class="badge">おすすめ</span><?php endif; ?><div class="term"><?php echo (int) $pl['months']; ?><span class="u">ヶ月</span></div><div class="model"><?php echo esc_html( $pl['name'] ); ?></div><div class="price"><span class="ps-label"><?php echo (int) pw( 'installments_max' ); ?>回分割</span>約<?php echo number_format( $pl['monthly'] ); ?><small>円/月</small></div><div class="price-lump">一括 <?php echo pw_yen( $pl['price'] ); ?>（税込）</div></div>
+          <?php endforeach; ?>
         </div>
         <p class="slider-hint">← 横にスワイプして他のプランを見る →</p>
-        <p class="prog-note">※受講料とは別に、入会金 55,000円（税込）が全プラン一律でかかります。<br>お支払い方法：銀行振込＝一括払いのみ／クレジットカード＝分割払い可（分割手数料はお客様のご負担）。</p>
+        <p class="prog-note">※受講料とは別に、入会金 <?php echo pw_yen( pw( 'entry_fee' ) ); ?>（税込）が全プラン一律でかかります。<br><?php echo esc_html( pw( 'pay_note' ) ); ?></p>
+        <?php $pw_more( 'price', '料金・お支払い方法の詳細を見る' ); ?>
       </div>
     </div>
   </section>
@@ -297,7 +321,7 @@
   <!-- ⑨ 参加者の声 -->
   <section class="voice sec-pad" id="voice">
     <div class="wrap">
-      <div class="headblock"><span class="eyebrow">Voice</span><h2 class="htitle">未経験から在宅ワークデビュー preworks <span class="mk">修了生の声</span></h2><p class="voice-badge">オンライン秘書デビュー率 <b>100<span class="vb-u">%</span></b><span class="vb-sub">修了生6名中6名がお仕事獲得につながっています（※2026年7月時点）</span></p></div>
+      <div class="headblock"><span class="eyebrow">Voice</span><h2 class="htitle">未経験から在宅ワークデビュー preworks <span class="mk">修了生の声</span></h2><p class="voice-badge">オンライン秘書デビュー率 <b><?php echo (int) $pw_jobrate['value']; ?><span class="vb-u">%</span></b><span class="vb-sub">修了生<?php echo (int) pw( 'graduates_total' ); ?>名中<?php echo (int) pw( 'graduates_hired' ); ?>名がURAKATAでの稼働につながっています（※<?php echo esc_html( pw( 'stats_as_of' ) ); ?>）</span></p></div>
       <div class="vgrid">
         <?php
           /* 修了生の声（voice）の最新3件を表示する。v1.0.12
@@ -342,6 +366,7 @@
         <?php endif; ?>
       </div>
       <p class="slider-hint">← 横にスワイプして他の声を見る →</p>
+      <?php $pw_more( 'voice', '修了生の声をすべて見る', preworks_voice_is_live() ); ?>
     </div>
   </section>
 
@@ -392,6 +417,7 @@
           <div class="mcard reveal"><img src="<?php echo PREWORKS_IMG; ?>/mentor-4.jpg" alt="玉木 達子"><div class="mbody"><h3>玉木 達子</h3><p class="m-attr">オンライン秘書歴：2年半／30代／3児ママ</p><p>URAKATAのコーディネートディレクター。案件と人をつなぐ視点で、あなたに合う進め方を一緒に考えます。</p></div></div>
         <?php endif; ?>
       </div>
+      <?php $pw_more( 'mentor', 'メンターをすべて見る', preworks_has_cpt_posts( 'mentor' ) ); ?>
     </div>
   </section>
 
@@ -425,7 +451,7 @@
           <p style="grid-column:1/-1;text-align:center;color:var(--muted);">ブログ記事は準備中です。</p>
         <?php endif; ?>
       </div>
-      <div class="center" style="margin-top:34px;"><a class="btn-more" href="<?php echo home_url('/blog/'); ?>">ブログをもっと見る<span class="btn-arw">▶</span></a></div>
+      <div class="center" style="margin-top:34px;"><a class="btn-more" href="<?php echo esc_url( pw_url( 'column' ) ); ?>">ブログをもっと見る<span class="btn-arw">▶</span></a></div>
     </div>
   </section>
   <?php endif; ?>
@@ -437,9 +463,10 @@
       <div class="qa">
         <details><summary><span class="qi">Q</span>パソコンが苦手ですが大丈夫ですか？</summary><div class="a"><span class="ai">A</span>大丈夫です！基本操作から教えます。「メール・Web閲覧程度」ができれば問題ありません。</div></details>
         <details><summary><span class="qi">Q</span>育児をしながらでも受講できますか？</summary><div class="a"><span class="ai">A</span>はい、受講できます。動画学習なので、お子様が寝ている時間やスキマ時間に進められます。面談時には、生活スタイルに合わせて最適なプランをご提案します。<br>※2ヶ月プランの場合：1日2時間×週5日×7週間が目安です。</div></details>
-        <details><summary><span class="qi">Q</span>本当に実案件ができるようになりますか？</summary><div class="a"><span class="ai">A</span>はい、ただし、学習時間を確保し、課題にしっかり取り組むことが前提です。「なんとなく受講」では難しいです。本気で取り組む方には、確実に結果を出してもらいます。</div></details>
+        <details><summary><span class="qi">Q</span>本当に実案件ができるようになりますか？</summary><div class="a"><span class="ai">A</span>はい、ただし、学習時間を確保し、課題にしっかり取り組むことが前提です。「なんとなく受講」では難しいです。本気で取り組む方には、メンターが結果につながるまで伴走します。</div></details>
         <details><summary><span class="qi">Q</span>受講までの流れを教えてください</summary><div class="a"><span class="ai">A</span>まずはLINEにご登録いただき、無料相談をお申し込みください。無料相談では、講座内容やプランの違い、受講開始までの流れを詳しくご案内します。</div></details>
       </div>
+      <?php $pw_more( 'faq', 'よくある質問をすべて見る' ); ?>
     </div>
   </section>
 

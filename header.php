@@ -28,6 +28,9 @@
 <header class="hdr" id="hdr">
   <a class="brand" href="<?php echo preworks_is_lp() ? '#hero' : home_url('/'); ?>">preworks</a>
   <nav>
+  <?php if ( ! preworks_is_lp() && function_exists( 'pw_header_nav' ) ) : /* SEOページ公開後のナビ（v2.0.0）。未公開ページはTOPのアンカーに自動フォールバック */ ?>
+    <?php pw_header_nav( $preworks_voice_href ); ?>
+  <?php else : /* 広告用LPは離脱を防ぐため従来のアンカーナビのまま */ ?>
     <a href="<?php echo $preworks_nav_base; ?>#about">preworksについて</a>
     <a href="<?php echo $preworks_nav_base; ?>#program">プログラム</a>
     <a href="<?php echo esc_url( $preworks_voice_href ); ?>">修了生の声</a>
@@ -37,6 +40,7 @@
     <?php if ( ! preworks_is_lp() && preworks_has_blog_posts() ) : ?>
       <a href="<?php echo home_url('/blog/'); ?>">ブログ</a>
     <?php endif; ?>
+  <?php endif; ?>
   </nav>
   <div class="nav-cta">
     <a class="btn btn-line" href="<?php echo esc_url( preworks_line_url() ); ?>" target="_blank" rel="noopener"><img src="<?php echo PREWORKS_IMG; ?>/LINE_Brand_icon.png" alt="LINE" class="liico">無料オンライン相談</a>

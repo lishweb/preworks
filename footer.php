@@ -2,10 +2,23 @@
 
 <footer class="ftr">
   <div class="wrap">
-    <div class="fgrid">
+    <div class="fgrid<?php echo ( ! preworks_is_lp() && function_exists( 'pw_footer_columns' ) ) ? ' pw-fgrid' : ''; ?>">
       <div>
         <div class="brand">preworks</div>
       </div>
+<?php
+  /* v2.0.0：LP以外は「講座について」「オンライン秘書を知る」の2列。公開済みのSEOページだけ自動で並ぶ */
+  $pw_ftr_new = ! preworks_is_lp() && function_exists( 'pw_footer_columns' );
+?>
+<?php if ( $pw_ftr_new ) :
+          $preworks_voice_url = get_post_type_archive_link( 'voice' );
+          if ( ! $preworks_voice_url ) { $preworks_voice_url = home_url( '/voice/' ); }
+          $preworks_voice_href = preworks_voice_is_live() ? $preworks_voice_url : home_url( '/#voice' );
+          $preworks_mentor_url = get_post_type_archive_link( 'mentor' );
+          if ( ! $preworks_mentor_url ) { $preworks_mentor_url = home_url( '/mentor/' ); }
+          $preworks_mentor_href = preworks_has_cpt_posts( 'mentor' ) ? $preworks_mentor_url : home_url( '/#mentor' );
+          pw_footer_columns( $preworks_voice_href, $preworks_mentor_href );
+      else : ?>
       <div>
         <p class="ftr-h">Navigation</p>
         <?php
@@ -37,6 +50,7 @@
           <?php endif; ?>
         </ul>
       </div>
+<?php endif; ?>
       <div>
         <p class="ftr-h">SNS / Contact</p>
         <a class="btn btn-line" href="<?php echo esc_url( preworks_line_url() ); ?>" target="_blank" rel="noopener" style="margin-bottom:16px;"><img src="<?php echo PREWORKS_IMG; ?>/LINE_Brand_icon.png" alt="LINE" class="liico">無料オンライン相談はこちら</a>

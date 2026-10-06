@@ -33,10 +33,15 @@ window.addEventListener('load',function(){
   } else {
     gsap.set(['.hero-copy .super','.hero-copy h1','.hero-copy .sub','.hero-proof','.hero-cta','.hero .micro','.hero-fig .photo','.hero-fig .chip'],{opacity:1});
   }
+  /* v2.0.0 実績数値：HTMLには最初から実数を出力（JSが動かない環境・検索エンジンでも0にならない）。
+     画面に入った瞬間だけ0からカウントアップする。 */
   gsap.utils.toArray('.count').forEach(function(el){
-    var to=+el.dataset.to,o={v:0};
-    gsap.to(o,{v:to,duration:1.8,ease:'power2.out',scrollTrigger:{trigger:el,start:'top 92%',once:true},
-      onUpdate:function(){el.textContent=Math.round(o.v).toLocaleString();}});
+    var to=+el.dataset.to;
+    if(reduce||!to){el.textContent=to.toLocaleString();return;}
+    ScrollTrigger.create({trigger:el,start:'top 92%',once:true,onEnter:function(){
+      var o={v:0};el.textContent='0';
+      gsap.to(o,{v:to,duration:1.8,ease:'power2.out',onUpdate:function(){el.textContent=Math.round(o.v).toLocaleString();}});
+    }});
   });
 });
 
