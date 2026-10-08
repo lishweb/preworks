@@ -74,7 +74,7 @@ function pw_data() {
          * 申込URLが確定したら 'url' に入れるだけで全ページのボタンが有効になる。
          * ⚠️ 既存の無料相談URL（preworks_line_url / line_urls）を代用しないこと。 */
         'seminar' => array(
-            'url'           => '',            // 申込URL（未確定）
+            'url'           => 'https://sub.preworks.jp/line/open/Tgo20OjCeOgf?mtid=7LDVOgaTVYYE', // 申込URL（LINE／UTAGE。2026-10-08 坂さん確定。mtid を含め改変しない）
             'label'         => '無料勉強会に申し込む',
             'pending_label' => '受付準備中',  // url 未設定時にボタンに添える文言
             'minutes'       => 60,            // 所要時間（分）。出典：納品HTML
