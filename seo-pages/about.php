@@ -58,7 +58,7 @@ $pw_rec = pw( 'stats.urakata_companies' );
     <div class="wrap">
       <div class="headblock"><span class="eyebrow">Our Story</span><h2 class="htitle">preworksが生まれた理由</h2></div>
       <div class="pw-about-copy">
-        <p>私たちはLISHは、オンライン秘書サービス「URAKATA」を運営しており、これまでに<?php echo number_format( (int) pw( 'urakata.applicants_total' ) ); ?>件を超えるご応募をいただきました。</p>
+        <p>私たちLISHは、オンライン秘書サービス「URAKATA」を運営しており、これまでに<?php echo number_format( (int) pw( 'urakata.applicants_total' ) ); ?>件を超えるご応募をいただきました。</p>
         <p>しかし、選考を通過できたのは約<?php echo (int) pw( 'urakata.pass_rate' ); ?>％にとどまり、多くの方が仕事を始めるために必要な準備や実践経験が不足しているという現状がありました。</p>
         <p>そんな課題を解決し、学びから仕事へつながる環境をつくるために、URAKATAの採用・運営の実践経験をもとに、preworksは生まれました。</p>
       </div>

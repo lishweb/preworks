@@ -411,7 +411,7 @@ function pw_seminar_url() {
 /**
  * 勉強会の申込ボタン。
  *   URL設定済み → 通常のリンク（LINEのURLなら既存の line_click 計測がそのまま効く。cta_position は従来どおり final）
- *   URL未設定   → クリックできない表示（<a> を出さない）。管理者には要確認の注記を出す
+ *   URL未設定   → クリックできない表示（<a> を出さない）。管理者には未設定の注記を出す
  */
 function pw_seminar_btn() {
     $url   = pw_seminar_url();
@@ -422,7 +422,7 @@ function pw_seminar_btn() {
     }
     $h = '<span class="btn btn-line pw-seminar-btn is-pending" aria-disabled="true">' . $icon . esc_html( $label ) . '<small>（' . esc_html( pw( 'seminar.pending_label', '受付準備中' ) ) . '）</small></span>';
     if ( pw_is_editor() ) {
-        $h .= '<p class="pw-tbc-label pw-seminar-admin">【要確認：勉強会の申込URLが未設定です（inc/pw-data.php の seminar.url）。設定するまで、一般にはクリックできないボタンとして表示されます】</p>';
+        $h .= '<p class="pw-tbc-label pw-seminar-admin">【申込URL未設定：inc/pw-data.php の seminar.url に勉強会の申込URLを入れるまで、一般にはクリックできないボタンとして表示されます】</p>';
     }
     return $h;
 }

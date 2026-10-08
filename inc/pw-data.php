@@ -62,8 +62,8 @@ function pw_data() {
             // 参考情報として掲載する時給の目安（2026-10-01 吉田さん確認）。業務内容・経験により異なる
             'rate_min'    => 1200,
             'rate_max'    => 1400,
-            // About ページ（OUR STORY / URAKATA TRACK RECORD）の数値。2026-10 納品HTML（preworks-about-assets）の値。
-            // ⚠️ 公開前に要確認（時点・定義とも未確認）。stats.secretaries（在籍114名）とは別の指標として扱う
+            // About ページ（OUR STORY / URAKATA TRACK RECORD）の数値。出典：2026-10 納品HTML（preworks-about-assets）。
+            // stats.secretaries（在籍オンライン秘書数）とは別の指標（累計）。数値の更新はここだけ直す
             'applicants_total' => 1000,   // 累計応募件数（「1,000件超」）
             'pass_rate'        => 10,     // 選考通過率（％、「約10％」）
             'workers_total'    => 206,    // 累計稼働ワーカー数（名）
@@ -76,8 +76,8 @@ function pw_data() {
         'seminar' => array(
             'url'           => '',            // 申込URL（未確定）
             'label'         => '無料勉強会に申し込む',
-            'pending_label' => '受付準備中',  // url 未設定時にボタンに添える文言【要確認】
-            'minutes'       => 60,            // 所要時間（分）【要確認】
+            'pending_label' => '受付準備中',  // url 未設定時にボタンに添える文言
+            'minutes'       => 60,            // 所要時間（分）。出典：納品HTML
         ),
 
         /* ---------- 無料相談 ---------- */
