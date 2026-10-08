@@ -358,16 +358,73 @@ function pw_process_headings( $html ) {
 /** 目次を出したい位置で呼ぶ（H2が3つ以上あるときだけ表示） */
 function pw_toc() { echo '<!--pw:toc-->'; }
 
-/** 既存の共通Contactブロック（全ページ末尾） */
+/**
+ * 全ページ末尾の共通CTA（2026-10：「Contact（無料オンライン相談）」→「無料オンライン勉強会」に置き換え）
+ *
+ * 通常サイトのページ末尾はすべてこの関数を呼ぶ（seo-pages は pw_page_end() 経由、
+ * front-page / archive-* / home / page-company / single-voice / single-mentor は直接呼ぶ）。
+ * 広告用LP（template-parts/lp-body.php）は独自のCTAのままで、ここは使わない。
+ * デザイン・文言は納品HTML（preworks-about-assets/about-preworks.html の FREE SEMINAR）に合わせている。
+ * 申込URLは inc/pw-data.php の seminar.url。未設定のあいだはクリックできないボタン表示（pw_seminar_btn 参照）。
+ */
 function pw_final_cta() {
+    $img = PREWORKS_IMG . '/seminar';
+    $min = (int) pw( 'seminar.minutes', 60 );
     ?>
-  <section class="finalcta sec-pad" id="contact"><div class="wrap">
-    <span class="eyebrow" style="color:var(--gold)">Contact</span>
-    <h2 class="mincho" data-notoc>「いつか在宅で働きたい」を、<br>今日から少しずつ形に。</h2>
-    <p>無料相談では、未経験からオンライン秘書を始めた方の事例をもとに、<br>今のあなたが何から始めればよいのかを一緒に整理します。</p>
-    <?php echo pw_line_btn( 'LINEで無料オンライン相談をする', 'final' ); ?>
-  </div></section>
+  <section class="pw-seminar sec-pad" id="contact"><div class="wrap"><div class="pw-seminar-box">
+    <span class="eyebrow">Free Seminar</span>
+    <p class="pw-seminar-aud">家族の予定に合わせて働きたい。今の収入にプラスしたい。<br>そんな方へ。</p>
+    <h2 class="pw-seminar-h" data-notoc>在宅ワークデビューまでの道筋が<br><strong><?php echo $min; ?>分</strong>で分かる！</h2>
+    <p class="pw-seminar-pill">無料オンライン勉強会を開催中</p>
+    <h3 class="pw-seminar-h3">勉強会では、こんなことが分かります</h3>
+    <ul class="pw-seminar-cards">
+      <li class="pw-seminar-card"><img src="<?php echo esc_url( $img . '/03-seminar-workstyle.jpg' ); ?>" alt="正社員とフリーランスの働き方を比較する女性のイラスト" width="1817" height="866" loading="lazy" decoding="async"><div class="pw-seminar-card-body"><span class="pw-seminar-no">01</span><h4>正社員とフリーランス、どう違う？</h4><p>自分に合う働き方を知ろう</p></div></li>
+      <li class="pw-seminar-card"><img src="<?php echo esc_url( $img . '/04-seminar-remote-work-life.jpg' ); ?>" alt="在宅ワークで叶う柔軟な毎日を表すイラスト" width="1817" height="866" loading="lazy" decoding="async"><div class="pw-seminar-card-body"><span class="pw-seminar-no">02</span><h4>在宅ワークで、どんな毎日が叶う？</h4><p>家族との時間も、収入も大切に</p></div></li>
+      <li class="pw-seminar-card"><img src="<?php echo esc_url( $img . '/05-seminar-online-secretary.jpg' ); ?>" alt="オンライン秘書としてタスクを整理する女性のイラスト" width="1817" height="866" loading="lazy" decoding="async"><div class="pw-seminar-card-body"><span class="pw-seminar-no">03</span><h4>オンライン秘書ってどんな仕事？</h4><p>未経験からできることをご紹介</p></div></li>
+      <li class="pw-seminar-card"><img src="<?php echo esc_url( $img . '/06-seminar-roadmap.jpg' ); ?>" alt="在宅ワークデビューまでのロードマップを描く女性のイラスト" width="1817" height="866" loading="lazy" decoding="async"><div class="pw-seminar-card-body"><span class="pw-seminar-no">04</span><h4>まず何から始めればいい？</h4><p>デビューまでの流れをチェック</p></div></li>
+    </ul>
+    <ul class="pw-seminar-badges">
+      <li class="pw-seminar-badge"><span class="pw-seminar-badge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 21h8M12 19v2"/><path d="m10 9 5 3-5 3z"/></svg></span><span>オンライン開催</span></li>
+      <li class="pw-seminar-badge"><span class="pw-seminar-badge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/><path d="M4 4 20 20"/></svg></span><span>顔出しなしOK</span></li>
+      <li class="pw-seminar-badge"><span class="pw-seminar-badge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14v-2a6 6 0 0 1 12 0v2"/><path d="M5 13h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a1 1 0 0 1 1-1ZM19 13h-2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-4a1 1 0 0 0-1-1Z"/></svg></span><span>耳だけ参加OK</span></li>
+    </ul>
+    <div class="pw-seminar-gift">
+      <span class="pw-seminar-kicker">無料勉強会 参加者限定プレゼント</span>
+      <p class="pw-seminar-gift-title">「<span class="mk">オンライン秘書のスタートに役立つ</span>」<br>3大特典プレゼント！</p>
+      <div class="pw-seminar-gift-grid">
+        <div class="pw-seminar-gift-card"><div class="pw-seminar-gift-visual"><img src="<?php echo esc_url( $img . '/07-benefit-roadmap.jpg' ); ?>" alt="特典01 初案件までのロードマップ" width="1920" height="1080" loading="lazy" decoding="async"></div><p class="pw-seminar-gift-name">未経験から案件獲得まで<br>迷わず進めるロードマップ</p></div>
+        <div class="pw-seminar-gift-card"><div class="pw-seminar-gift-visual"><img src="<?php echo esc_url( $img . '/08-benefit-skill-checklist.jpg' ); ?>" alt="特典02 実務スキルチェックリスト" width="1920" height="1080" loading="lazy" decoding="async"></div><p class="pw-seminar-gift-name">自分に必要な準備が分かる<br>実務スキルチェックリスト</p></div>
+        <div class="pw-seminar-gift-card"><div class="pw-seminar-gift-visual"><img src="<?php echo esc_url( $img . '/09-benefit-profile-template.jpg' ); ?>" alt="特典03 プロフィール＆応募文テンプレート" width="1920" height="1080" loading="lazy" decoding="async"></div><p class="pw-seminar-gift-name">応募準備にそのまま使える<br>プロフィール＆応募文テンプレート</p></div>
+      </div>
+    </div>
+    <?php echo pw_seminar_btn(); ?>
+  </div></div></section>
     <?php
+}
+
+/** 勉強会の申込URL（inc/pw-data.php の seminar.url）。未設定なら '' */
+function pw_seminar_url() {
+    $u = trim( (string) pw( 'seminar.url', '' ) );
+    return ( $u !== '' && preg_match( '#^https?://#i', $u ) ) ? $u : '';
+}
+
+/**
+ * 勉強会の申込ボタン。
+ *   URL設定済み → 通常のリンク（LINEのURLなら既存の line_click 計測がそのまま効く。cta_position は従来どおり final）
+ *   URL未設定   → クリックできない表示（<a> を出さない）。管理者には要確認の注記を出す
+ */
+function pw_seminar_btn() {
+    $url   = pw_seminar_url();
+    $label = (string) pw( 'seminar.label', '無料勉強会に申し込む' );
+    $icon  = '<img src="' . esc_url( PREWORKS_IMG . '/LINE_Brand_icon.png' ) . '" alt="LINE" class="liico">';
+    if ( $url ) {
+        return '<a class="btn btn-line pw-seminar-btn" href="' . esc_url( $url ) . '" target="_blank" rel="noopener" data-pw-cta="final">' . $icon . esc_html( $label ) . '</a>';
+    }
+    $h = '<span class="btn btn-line pw-seminar-btn is-pending" aria-disabled="true">' . $icon . esc_html( $label ) . '<small>（' . esc_html( pw( 'seminar.pending_label', '受付準備中' ) ) . '）</small></span>';
+    if ( pw_is_editor() ) {
+        $h .= '<p class="pw-tbc-label pw-seminar-admin">【要確認：勉強会の申込URLが未設定です（inc/pw-data.php の seminar.url）。設定するまで、一般にはクリックできないボタンとして表示されます】</p>';
+    }
+    return $h;
 }
 
 /* =====================================================================

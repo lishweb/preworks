@@ -219,3 +219,103 @@ a.pw-related-item.pw-unpub{border-style:dashed;border-color:#d63638;text-decorat
 .pw-guide-nav a:hover{color:var(--terra);}
 
 .pw-guide-badge{background:var(--terra)!important;color:#fff!important;margin-right:6px;}
+
+/* ============================================================
+ * About ページ（/about/）  seo-pages/about.php  2026-10
+ * 冒頭「preworksとは？」は TOP の .about / .compare / .nums をそのまま使う。以下は OUR STORY 以降と調整分。
+ * すべて .pw-about- 接頭辞で閉じる（既存の section / .card 等の汎用セレクタは触らない）。
+ * ============================================================ */
+.pw-about-intro{padding-bottom:clamp(48px,6vw,80px);}
+.pw-about-intro .compare{margin-top:0;}
+.pw-about-intro .pw-nums{margin:44px 0 0;}
+.pw-about-sec{background:var(--cream);position:relative;padding:0 0 clamp(56px,8vw,96px);}
+.pw-about-sec .headblock{max-width:none;}
+.pw-about-copy{max-width:900px;margin:32px auto 0;}
+.pw-about-copy p{font-size:clamp(15px,1.2vw,17px);line-height:1.9;margin:0 0 18px;color:var(--ink);}
+.pw-about-copy p:last-child{margin-bottom:0;}
+.pw-about-num{font-family:'Shippori Mincho',serif;font-weight:800;color:var(--terra);font-size:clamp(40px,4.6vw,58px);line-height:1;margin:0 .04em;}
+.pw-about-flow{margin:32px auto 0;display:grid;grid-template-columns:1fr 50px 1fr 50px 1fr;align-items:center;background:var(--bg2);padding:28px;border-radius:24px;}
+.pw-about-flowbox{background:var(--cream);border:1px solid var(--line);border-radius:14px;text-align:center;padding:22px 16px;font-weight:700;font-size:clamp(15px,1.3vw,17px);line-height:1.6;}
+.pw-about-flowbox .pw-about-num{font-size:clamp(38px,4.2vw,52px);}
+.pw-about-arrow{text-align:center;color:#9c9084;font-size:28px;font-weight:800;line-height:1;}
+.pw-about-brand{font-family:'Space Grotesk',monospace;font-weight:700;color:var(--terra);font-size:clamp(28px,3vw,38px);line-height:1.1;letter-spacing:-.02em;}
+.pw-about-panel{background:var(--bg2);border-radius:30px;padding:clamp(24px,3.4vw,44px);margin-top:34px;}
+.pw-about-record{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,430px);align-items:center;gap:28px;}
+.pw-about-record-eyebrow{font-family:'Space Grotesk',monospace;font-size:13px;letter-spacing:.15em;color:var(--terra);font-weight:700;margin:0;}
+.pw-about-record-title{font-family:'Shippori Mincho',serif;font-weight:800;font-size:clamp(19px,2vw,24px);line-height:1.5;margin:8px 0 24px;}
+.pw-about-record-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;font-weight:700;font-size:clamp(15px,1.2vw,17px);line-height:1.6;}
+.pw-about-photo{display:block;width:100%;height:250px;object-fit:cover;border-radius:18px;}
+.pw-about-msg{display:grid;grid-template-columns:1.25fr .75fr;gap:44px;padding:clamp(24px,3vw,38px);}
+.pw-about-msg p{font-size:clamp(15px,1.2vw,17px);line-height:1.9;margin:0 0 20px;color:var(--ink);}
+.pw-about-closing{font-family:'Shippori Mincho',serif;font-size:clamp(19px,2vw,25px)!important;font-weight:700!important;line-height:1.65!important;margin:30px 0 0!important;}
+.pw-about-msg-photo{height:100%;min-height:440px;}
+@media(max-width:900px){
+  .pw-about-flow{grid-template-columns:1fr;gap:14px;padding:22px;}
+  .pw-about-arrow{transform:rotate(90deg);}
+  .pw-about-record{grid-template-columns:1fr;}
+  .pw-about-record-grid{gap:18px;}
+  .pw-about-photo{height:auto;max-height:280px;}
+  .pw-about-msg{grid-template-columns:1fr;gap:24px;}
+  .pw-about-msg-photo{min-height:0;}
+}
+@media(max-width:520px){
+  .pw-about-record-grid{grid-template-columns:1fr;}
+  .pw-about-panel{border-radius:22px;}
+}
+
+/* ============================================================
+ * 無料オンライン勉強会 CTA（全ページ末尾の共通部品 pw_final_cta()）  2026-10
+ * 旧「Contact（無料オンライン相談）」の置き換え。広告用LPは lp-body.php の .finalcta のまま。
+ * 納品HTML（about-preworks.html の .seminar）の配色・構成をテーマのトークンに置き換えている。
+ * ============================================================ */
+.pw-seminar{background:var(--cream);position:relative;overflow:hidden;}
+.pw-seminar .wrap{position:relative;z-index:1;}
+.pw-seminar-box{background:var(--bg2);border-radius:38px;padding:clamp(44px,6vw,72px) clamp(20px,3.5vw,42px) clamp(38px,4.5vw,58px);text-align:center;}
+.pw-seminar-box .eyebrow{display:block;}
+.pw-seminar-aud{font-family:'Shippori Mincho',serif;font-size:clamp(17px,1.9vw,22px);line-height:1.7;margin:14px 0 18px;color:var(--ink);}
+.pw-seminar-h{font-family:'Shippori Mincho',serif;font-weight:700;font-size:clamp(27px,4vw,52px);line-height:1.22;margin:0;color:var(--ink);}
+.pw-seminar-h strong{color:var(--terra);font-size:1.6em;font-weight:500;}
+.pw-seminar-pill{display:inline-block;margin:20px auto 42px;padding:12px 34px;border-radius:999px;background:var(--peach);font-family:'Shippori Mincho',serif;font-size:clamp(17px,1.9vw,22px);line-height:1.5;}
+.pw-seminar-h3{font-family:'Shippori Mincho',serif;font-weight:700;font-size:clamp(21px,2.6vw,30px);margin:0 0 28px;color:var(--ink);}
+.pw-seminar-cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;text-align:left;}
+.pw-seminar-card{overflow:hidden;background:var(--cream);border:1px solid var(--line);border-radius:18px;}
+.pw-seminar-card img{display:block;width:100%;height:auto;aspect-ratio:2.1/1;object-fit:cover;}
+.pw-seminar-card-body{padding:18px 20px 22px;}
+.pw-seminar-no{display:block;color:var(--terra);font-family:'Space Grotesk',monospace;font-style:italic;font-size:29px;line-height:1;}
+.pw-seminar-card h4{font-family:'Shippori Mincho',serif;font-weight:700;font-size:clamp(17px,1.5vw,21px);line-height:1.45;margin:6px 0 10px;color:var(--ink);}
+.pw-seminar-card p{color:#655f5a;font-size:14px;line-height:1.6;margin:0;}
+.pw-seminar-badges{list-style:none;margin:20px 0 28px;padding:16px 18px;background:var(--cream);border-radius:16px;display:grid;grid-template-columns:repeat(3,1fr);font-size:clamp(15px,1.2vw,17px);font-weight:700;}
+.pw-seminar-badge{display:flex;align-items:center;justify-content:center;gap:11px;min-height:42px;}
+.pw-seminar-badge+.pw-seminar-badge{border-left:1px solid #e6c4b3;}
+.pw-seminar-badge-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;color:var(--terra);background:#fff4ed;border-radius:50%;}
+.pw-seminar-badge-icon svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.pw-seminar-gift{max-width:930px;margin:30px auto 28px;padding:34px 34px 38px;background:var(--cream);border-radius:24px;box-shadow:0 16px 36px rgba(188,103,58,.14);}
+.pw-seminar-kicker{display:inline-block;padding:7px 18px;border-radius:999px;background:var(--gold);color:#fff;font-size:13px;font-weight:700;}
+.pw-seminar-gift-title{margin:22px 0 24px;font-family:'Shippori Mincho',serif;font-size:clamp(20px,2.3vw,27px);font-weight:700;line-height:1.55;color:var(--ink);}
+.pw-seminar-gift-title .mk{color:var(--terra);}
+.pw-seminar-gift-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.pw-seminar-gift-card{background:#f6ecdc;border-radius:12px;padding:22px 16px 20px;}
+.pw-seminar-gift-visual{aspect-ratio:16/9;border-radius:10px;background:var(--cream);box-shadow:0 8px 18px rgba(71,54,34,.11);overflow:hidden;}
+.pw-seminar-gift-visual img{display:block;width:100%;height:100%;object-fit:contain;}
+.pw-seminar-gift-name{margin:18px 0 0;font-weight:700;font-size:clamp(15px,1.2vw,17px);line-height:1.55;color:var(--ink);}
+.pw-seminar-btn{width:min(520px,100%);font-size:clamp(17px,1.7vw,23px);padding:20px 28px;white-space:normal;}
+.pw-seminar-btn.is-pending{background:#C9BCA9;color:#fff;box-shadow:none;cursor:default;pointer-events:none;}
+.pw-seminar-btn{flex-wrap:wrap;}
+.pw-seminar-btn.is-pending small{flex:0 0 100%;font-size:.7em;font-weight:700;margin-top:4px;line-height:1.4;}
+.pw-seminar-h,.pw-seminar-h3,.pw-seminar-aud,.pw-seminar-card h4,.pw-seminar-gift-title,.pw-seminar-gift-name,.pw-about-record-title,.pw-about-closing{word-break:auto-phrase;text-wrap:balance;}
+.pw-seminar-admin{margin:14px auto 0!important;max-width:40em;}
+@media(max-width:900px){
+  .pw-seminar-box{border-radius:26px;}
+  .pw-seminar-pill{display:block;padding:12px 18px;}
+  .pw-seminar-cards{grid-template-columns:1fr 1fr;}
+  .pw-seminar-badges{grid-template-columns:1fr;gap:0;padding:10px 16px;}
+  .pw-seminar-badge{justify-content:flex-start;padding:12px 0;}
+  .pw-seminar-badge+.pw-seminar-badge{border-left:0;border-top:1px solid #e6c4b3;}
+  .pw-seminar-gift{padding:26px 18px 30px;border-radius:20px;}
+  .pw-seminar-gift-grid{grid-template-columns:1fr;}
+  .pw-seminar-gift-visual{max-width:520px;margin:auto;}
+}
+@media(max-width:520px){
+  .pw-seminar-cards{grid-template-columns:1fr;}
+  .pw-seminar-card-body{padding:16px 18px 18px;}
+}

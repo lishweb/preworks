@@ -470,15 +470,8 @@ $pw_jobrate = pw( 'stats.job_rate' );
     </div>
   </section>
 
-  <!-- ⑬ 最終CTA -->
-  <section class="finalcta sec-pad" id="contact">
-    <div class="wrap">
-      <span class="eyebrow" style="color:var(--gold)">Contact</span>
-      <div class="mincho finalcta-h">「いつか在宅で働きたい」を、<br>今日から少しずつ形に。</div>
-      <p>無料相談では、未経験からオンライン秘書を始めた方の事例をもとに、<br>今のあなたが何から始めればよいのかを一緒に整理します。</p>
-      <a class="btn btn-line" href="https://sub.preworks.jp/line/open/bQAtEmMQRwat?mtid=taFGWWNm6MRj" target="_blank" rel="noopener"><img src="<?php echo PREWORKS_IMG; ?>/LINE_Brand_icon.png" alt="LINE" class="liico">LINEで無料オンライン相談をする</a>
-    </div>
-  </section>
+  <!-- ⑬ 最終CTA（2026-10：全ページ共通の「無料オンライン勉強会」CTA。inc/pw-core.php pw_final_cta()） -->
+  <?php pw_final_cta(); ?>
 
 
 </main>

@@ -18,12 +18,7 @@
       <tr><th>顧問弁護士</th><td>伊倉総合法律事務所</td></tr>
     </table>
   </div></section>
-  <section class="finalcta sec-pad" id="contact"><div class="wrap">
-    <span class="eyebrow" style="color:var(--gold)">Contact</span>
-    <h2 class="mincho">「いつか在宅で働きたい」を、<br>今日から少しずつ形に。</h2>
-    <p>無料相談では、未経験からオンライン秘書を始めた方の事例をもとに、<br>今のあなたが何から始めればよいのかを一緒に整理します。</p>
-    <a class="btn btn-line" href="https://sub.preworks.jp/line/open/bQAtEmMQRwat?mtid=taFGWWNm6MRj" target="_blank" rel="noopener"><img src="<?php echo get_template_directory_uri(); ?>/assets/img/LINE_Brand_icon.png" alt="LINE" class="liico">LINEで無料オンライン相談をする</a>
-  </div></section>
+  <?php pw_final_cta(); /* 2026-10：全ページ共通の「無料オンライン勉強会」CTA（inc/pw-core.php） */ ?>
 
 </main>
 <?php get_footer(); ?>
