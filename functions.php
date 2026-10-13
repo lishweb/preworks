@@ -25,7 +25,7 @@ function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.28' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.29' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
@@ -1001,6 +1001,8 @@ function preworks_ogp() {
     if ( is_singular() ) {
         $e = wp_strip_all_tags( get_the_excerpt() );
         if ( $e ) { $desc = mb_substr( $e, 0, 120 ); }
+        // 記事別SEOの説明文が入力されているときだけ、OG/Twitterもそれに揃える（未入力は従来どおり）
+        if ( function_exists( 'preworks_post_seo' ) && preworks_post_seo( '_pw_seo_desc' ) !== '' ) { $desc = preworks_post_seo( '_pw_seo_desc' ); }
     }
     // SEOページ登録表のページは、登録表の description と URL を使う
     if ( function_exists( 'pw_current_description' ) && pw_current_description() !== '' ) {
@@ -2046,6 +2048,8 @@ function preworks_render_blog_body( $text ) {
         }
         if ( mb_substr( $t, 0, 1 ) === '■' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 2, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h2 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h2>'; continue; }
         if ( mb_substr( $t, 0, 1 ) === '□' ) { $flushList(); $flushPara(); $counter++; $id = 'sec-' . $counter; $toc[] = array( 3, $id, trim( mb_substr( $t, 1 ) ) ); $out .= '<h3 id="' . $id . '">' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h3>'; continue; }
+        // ◆ ＝ h4（補助見出し）。目次対象外・id なし・$counter を増やさない（既存の sec-N を変えないため）。
+        if ( mb_substr( $t, 0, 1 ) === '◆' ) { $flushList(); $flushPara(); $out .= '<h4>' . $inline( trim( mb_substr( $t, 1 ) ) ) . '</h4>'; continue; }
         if ( preg_match( '/^【ポイント】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="point">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
         if ( preg_match( '/^【注意】(.*)$/u', $t, $m ) ) { $flushList(); $flushPara(); $out .= '<div class="note">' . $inline( trim( $m[1] ) ) . '</div>'; continue; }
         if ( preg_match( '/^\[LINE\]$/ui', $t ) ) { $flushList(); $flushPara(); $out .= ( function_exists( 'pw_is_guide_post' ) && is_singular( 'post' ) && pw_is_guide_post( get_queried_object_id() ) ) ? do_shortcode( '[line_cta lead="オンライン秘書として働く準備を、無料オンライン相談で一緒に整理しませんか？"]' ) : do_shortcode( '[line_cta]' ); continue; }
@@ -2087,7 +2091,7 @@ function preworks_blog_metabox_html( $post ) {
     $lead = get_post_meta( $post->ID, '_pw_bloglead', true );
     $body = get_post_meta( $post->ID, '_pw_blogbody', true );
     $s = 'style="width:100%;max-width:760px"';
-    $ph = "■最初の見出し\nここに文章を書きます。==重要な部分==はマーカー、**ここ**は太字になります。\n\n□小さめの見出し\n・箇条書き1\n・箇条書き2\n\n1. 番号つき手順1\n2. 番号つき手順2\n\n【ポイント】伝えたい要点をこの枠で目立たせます。\n\n[表:preworksと他社のサポート内容の比較]\n|項目|preworks|他社A|\n|---|---|---|\n|受講期間|最短2ヵ月|6ヵ月|\n|サポート|1on1の面談あり|チャットのみ|\n\n[LINE]\n\n■まとめ\n最後のメッセージ。";
+    $ph = "■最初の見出し\nここに文章を書きます。==重要な部分==はマーカー、**ここ**は太字になります。\n\n□小さめの見出し\n◆補助見出し（もくじには入りません）\n・箇条書き1\n・箇条書き2\n\n1. 番号つき手順1\n2. 番号つき手順2\n\n【ポイント】伝えたい要点をこの枠で目立たせます。\n\n[表:preworksと他社のサポート内容の比較]\n|項目|preworks|他社A|\n|---|---|---|\n|受講期間|最短2ヵ月|6ヵ月|\n|サポート|1on1の面談あり|チャットのみ|\n\n[LINE]\n\n■まとめ\n最後のメッセージ。";
     echo '<style>.pwb label{display:block;margin:14px 0 4px;font-weight:600}.pwb .hint{color:#888;font-size:12px;font-weight:400}</style>';
     echo '<div class="pwb">';
     echo preworks_slug_warning_box( $post->ID );
@@ -2095,7 +2099,7 @@ function preworks_blog_metabox_html( $post ) {
     echo '<b>この欄に書くだけで記事が完成します（下のブロックエディタは使わなくてOK）。</b><br>';
     echo 'タイトル＝画面上の「タイトルを追加」／アイキャッチ画像＝記事のサムネイル／カテゴリ＝右側で選択<br>';
     echo '<b>書き方（行の先頭に記号）：</b><br>';
-    echo '■ 大見出し　／　□ 小見出し　／　・ 箇条書き　／　1. 番号リスト　／　＞ 引用<br>';
+    echo '■ 大見出し　／　□ 小見出し　／　◆ 補助見出し（もくじには入りません）　／　・ 箇条書き　／　1. 番号リスト　／　＞ 引用<br>';
     echo '【ポイント】文章 → オレンジ枠　／　【注意】文章 → 黄色枠　／　[LINE] → LINE相談ボタン<br>';
     echo '**文字** → 太字　／　__文字__ → 下線　／　==文字== → 黄色マーカー　／　[表示文字](URL) → リンク<br>';
     echo '<b>画像：</b>[画像:URL] ／ [画像:URL|代替テキスト] ／ [画像:URL|代替テキスト|キャプション]<br>';
@@ -2107,6 +2111,10 @@ function preworks_blog_metabox_html( $post ) {
     echo '　└ <code>|:---:|</code> で中央寄せ、<code>|---:|</code> で右寄せ。スマホは自動で横スクロールします。<br>';
     echo '段落は空行で区切る。<b>もくじは見出しから自動で作られます。</b>';
     echo '</div>';
+    echo '<label>SEOタイトル（任意） <span class="hint">検索結果やSNSに出るタイトル。空欄なら「記事タイトル – サイト名」。入力した文言がそのまま使われます（サイト名は自動で付きません）。目安：全角30字前後</span></label>';
+    echo '<input type="text" name="pw_seo_title" ' . $s . ' value="' . esc_attr( get_post_meta( $post->ID, '_pw_seo_title', true ) ) . '">';
+    echo '<label>メタディスクリプション（任意） <span class="hint">検索結果の説明文。空欄ならリード文または本文冒頭から自動で作ります。目安：全角80字前後</span></label>';
+    echo '<textarea name="pw_seo_desc" rows="3" ' . $s . '>' . esc_textarea( get_post_meta( $post->ID, '_pw_seo_desc', true ) ) . '</textarea>';
     echo '<label>リード文（導入・任意） <span class="hint">記事冒頭の要約。クリーム色の帯で表示。空行で段落、**太字** などの装飾も使えます</span></label>';
     echo '<textarea name="pw_bloglead" rows="4" ' . $s . '>' . esc_textarea( $lead ) . '</textarea>';
     echo '<label>本文</label>';
@@ -2119,6 +2127,12 @@ function preworks_blog_save( $post_id ) {
     if ( ! current_user_can( 'edit_post', $post_id ) ) return;
     if ( isset( $_POST['pw_bloglead'] ) ) update_post_meta( $post_id, '_pw_bloglead', sanitize_textarea_field( wp_unslash( $_POST['pw_bloglead'] ) ) );
     if ( isset( $_POST['pw_blogbody'] ) ) update_post_meta( $post_id, '_pw_blogbody', sanitize_textarea_field( wp_unslash( $_POST['pw_blogbody'] ) ) );
+    // 記事別SEO（空欄にしたらメタごと削除＝従来の自動生成に戻る）
+    foreach ( array( 'pw_seo_title' => '_pw_seo_title', 'pw_seo_desc' => '_pw_seo_desc' ) as $field => $key ) {
+        if ( ! isset( $_POST[ $field ] ) ) continue;
+        $v = trim( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) );
+        if ( $v === '' ) delete_post_meta( $post_id, $key ); else update_post_meta( $post_id, $key, $v );
+    }
 }
 add_action( 'save_post_post', 'preworks_blog_save' );
 
@@ -2127,6 +2141,19 @@ function preworks_seo_plugin_active() {
         || defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' )
         || defined( 'SSP_VERSION' ) || defined( 'SEOPRESS_VERSION' );
 }
+
+// 記事別SEO（投稿のみ）。未入力なら空文字＝従来動作
+function preworks_post_seo( $key ) {
+    if ( ! is_singular( 'post' ) ) return '';
+    $v = get_post_meta( get_queried_object_id(), $key, true );
+    return is_string( $v ) ? trim( $v ) : '';
+}
+function preworks_post_seo_title( $title ) {
+    $v = preworks_post_seo( '_pw_seo_title' );
+    // pre_get_document_title の戻り値はコア側でエスケープされないため、ここで &・<・" を無害化する
+    return $v !== '' ? esc_html( $v ) : $title;
+}
+add_filter( 'pre_get_document_title', 'preworks_post_seo_title', 30 );
 
 // ① テーマのOGPを無効化（wp_head priority 5 で登録済み）
 function preworks_disable_theme_ogp() {
@@ -2145,7 +2172,7 @@ function preworks_plain_text_from_easy( $text, $limit = 78 ) {
         $t = trim( $raw );
         if ( $t === '' ) continue;
         if ( preg_match( '/^\[(LINE|画像[:：])/ui', $t ) ) continue;
-        $t = preg_replace( '/^(■|□|＞|>|・|･)\s*/u', '', $t );
+        $t = preg_replace( '/^(■|□|◆|＞|>|・|･)\s*/u', '', $t );
         $t = preg_replace( '/^\d+[\.\)、．]\s*/u', '', $t );
         $t = preg_replace( '/^【(ポイント|注意)】\s*/u', '', $t );
         $t = preg_replace( '/^(質問者|コンサルタント|コンサル|本人|質問|Q|A|W|C)[\s:：]+/u', '', $t );
@@ -2206,6 +2233,8 @@ function preworks_fallback_description() {
     // ブログ記事
     if ( is_singular( 'post' ) ) {
         $id   = get_queried_object_id();
+        $seo  = preworks_post_seo( '_pw_seo_desc' );
+        if ( $seo !== '' ) return $seo;
         $lead = get_post_meta( $id, '_pw_bloglead', true );
         if ( $lead ) return preworks_plain_text_from_easy( $lead );
         return preworks_plain_text_from_easy( get_post_meta( $id, '_pw_blogbody', true ) );
