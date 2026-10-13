@@ -55,18 +55,18 @@ $pw_col = pw_page( 'column' );
     <?php
       $q = new WP_Query( array( 'post_type' => 'post', 'posts_per_page' => -1, 'post_status' => 'publish', 'ignore_sticky_posts' => true ) );
       if ( $q->have_posts() ) :
-        /* 絞り込みタブ：記事のあるカテゴリだけ。6カテゴリを先に、その他（既存カテゴリ）を後に並べる */
+        /* 絞り込みタブ：公開記事のあるカテゴリだけ（hierarchical=false＝子にだけ記事がある親は出さない。記事の data-cat は直接のカテゴリのみのため）。6カテゴリを先に、その他（既存カテゴリ）を後に並べる */
         $pw_tabs = array();
         foreach ( array_keys( $pw_col_cats ) as $pw_slug ) {
             $t = get_term_by( 'slug', $pw_slug, 'category' );
             if ( $t && $t->count > 0 ) $pw_tabs[ $t->slug ] = $t->name;
         }
-        foreach ( get_categories( array( 'hide_empty' => true ) ) as $t ) {
+        foreach ( get_categories( array( 'hide_empty' => true, 'hierarchical' => false ) ) as $t ) {
             if ( $t->slug === 'uncategorized' || isset( $pw_tabs[ $t->slug ] ) ) continue;
             $pw_tabs[ $t->slug ] = $t->name;
         }
     ?>
-    <?php if ( count( $pw_tabs ) > 1 ) : ?>
+    <?php if ( count( $pw_tabs ) >= 1 ) : /* 公開記事のあるカテゴリーが1つだけでも「すべて」＋そのタブを出す */ ?>
     <div class="blogtabs" style="margin-top:34px;">
       <button class="btab is-active" data-cat="*" type="button">すべて</button>
       <?php foreach ( $pw_tabs as $pw_slug => $pw_name ) : ?>
