@@ -21,11 +21,23 @@ function preworks_setup() {
 }
 add_action( 'after_setup_theme', 'preworks_setup' );
 
+/* ブログカードのサムネイル（/blog/ と TOP のブログ欄で共通）。
+ * preworks_card は 800x600 のハードクロップのため、縦長・正方形の元画像が切られる。
+ * 切り抜きの無い 'large'（長辺1024px・比率維持）を使い、CSS(.bloggrid .acard img)で枠内に全体表示する。
+ * 修了生の声・メンター等は従来どおり preworks_card / preworks_portrait。 */
+function pw_blog_thumb() {
+    if ( has_post_thumbnail() ) {
+        the_post_thumbnail( 'large', array( 'alt' => get_the_title(), 'sizes' => '(max-width: 820px) 92vw, 380px', 'loading' => 'lazy' ) );
+    } else {
+        echo '<img src="' . esc_url( PREWORKS_IMG . '/case-1.jpg' ) . '" alt="">';
+    }
+}
+
 function preworks_assets() {
     // フォント
     wp_enqueue_style( 'preworks-fonts', 'https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap', array(), null );
     // メインCSS
-    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.29' );
+    wp_enqueue_style( 'preworks-main', get_template_directory_uri() . '/assets/css/_shared.css', array(), '1.0.30' );
     // GSAP（任意・トップのアニメ用）
     wp_enqueue_script( 'gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
     wp_enqueue_script( 'gsap-st', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js', array( 'gsap' ), '3.12.5', true );
