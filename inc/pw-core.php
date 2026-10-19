@@ -947,7 +947,7 @@ function pw_footer_columns( $voice_href, $mentor_href ) {
         array( 'よくある質問', home_url( '/faq/' ) ),
         array( 'お問い合わせ', home_url( '/contact/' ) ),
     );
-    if ( function_exists( 'preworks_has_blog_posts' ) && preworks_has_blog_posts() ) $col1[] = array( 'コラム', pw_url( 'column' ) );
+    if ( function_exists( 'preworks_has_blog_posts' ) && preworks_has_blog_posts() ) $col1[] = array( 'お役立ちブログ', pw_url( 'column' ) );
     $col2 = array();
     if ( pw_is_live( 'guide' ) && function_exists( 'pw_guide_has_posts' ) && pw_guide_has_posts() ) $col2[] = array( 'オンライン秘書ガイド', pw_url( 'guide' ) );
     foreach ( array( 'for-mama', 'for-40s-50s', 'for-side-job', 'check' ) as $s ) {

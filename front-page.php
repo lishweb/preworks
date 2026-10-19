@@ -444,7 +444,7 @@ $pw_jobrate = pw( 'stats.job_rate' );
           if ( $pw_bq->have_posts() ) : while ( $pw_bq->have_posts() ) : $pw_bq->the_post();
         ?>
           <a class="acard reveal" href="<?php the_permalink(); ?>">
-            <?php if ( has_post_thumbnail() ) { the_post_thumbnail( 'preworks_card', array( 'alt' => get_the_title() ) ); } else { ?><img src="<?php echo PREWORKS_IMG; ?>/case-1.jpg" alt=""><?php } ?>
+            <?php pw_blog_thumb(); ?>
             <div class="abody"><div class="meta"><span class="cat"><?php $c = get_the_category(); echo $c ? esc_html( $c[0]->name ) : 'お役立ち'; ?></span><span><?php echo get_the_date( 'Y.m.d' ); ?></span></div><h3><?php the_title(); ?></h3><span class="readmore">続きを読む →</span></div>
           </a>
         <?php endwhile; wp_reset_postdata(); else : ?>
