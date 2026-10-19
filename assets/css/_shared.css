@@ -1906,7 +1906,10 @@ a.btn-more{display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
  * 効かないようにしておく。上の .nobr{white-space:nowrap} より後ろに置くこと。 */
 .post-body .nobr,.post-body .post-toc .nobr{white-space:normal;}
 
-/* ブログカードのサムネイル：枠は3:2で統一し、元画像は切らずに全体表示（TOPのブログ欄と /blog/ 共通）。
+/* ブログカードのサムネイル：画像は常にカード横幅いっぱい、縦横比は元画像のまま（切り抜き・引き伸ばしなし）。
+ * 高さは画像ごとに変わる（TOPのブログ欄と /blog/ 共通）。固定 aspect-ratio + contain だと
+ * 比率が枠と違う画像（4:3 など）の左右に余白が出るため使わない。
  * .bloggrid 内に限定しているので、修了生の声・メンター等の .acard/.vph には影響しない。 */
-.bloggrid .acard img{width:100%;aspect-ratio:3/2;height:auto;object-fit:contain;object-position:50% 50%;background:var(--bg2);display:block;}
+.bloggrid .acard img{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:fill;}
 .bloggrid .acard:hover img{transform:none;}
+.bloggrid .acard .readmore{margin-top:auto;padding-top:10px;}
