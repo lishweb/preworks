@@ -17,8 +17,7 @@ $pw_col = pw_page( 'column' );
       'lead'    => 'オンライン秘書・在宅ワークに役立つ情報をお届けします。気になるカテゴリーで絞り込んで、知りたい記事を探せます。',
   ) ); ?>
 
-  <section class="blog sec-pad"><div class="wrap">
-    <div class="headblock"><span class="eyebrow">Latest</span><h2 class="htitle">新着<span class="mk">ブログ</span></h2></div>
+  <section class="blog blog-index sec-pad"><div class="wrap">
     <?php
       $q = new WP_Query( array( 'post_type' => 'post', 'posts_per_page' => -1, 'post_status' => 'publish', 'ignore_sticky_posts' => true ) );
       if ( $q->have_posts() ) :
@@ -30,7 +29,7 @@ $pw_col = pw_page( 'column' );
         }
     ?>
     <?php if ( count( $pw_tabs ) >= 1 ) : /* 公開記事のあるカテゴリーが1つだけでも「すべて」＋そのタブを出す */ ?>
-    <div class="blogtabs" style="margin-top:34px;">
+    <div class="blogtabs">
       <button class="btab is-active" data-cat="*" type="button">すべて</button>
       <?php foreach ( $pw_tabs as $pw_slug => $pw_name ) : ?>
         <button class="btab" data-cat="<?php echo esc_attr( $pw_slug ); ?>" type="button"><?php echo esc_html( $pw_name ); ?></button>
@@ -50,7 +49,7 @@ $pw_col = pw_page( 'column' );
     <div class="center" style="margin-top:36px;"><button class="btn-more" id="blogMore" type="button">記事をもっと見る　→</button></div>
     <?php endif; ?>
     <?php else : ?>
-      <p class="center" style="margin-top:34px;color:var(--muted);">ブログは準備中です。preworksの講座内容や修了後の働き方は、下のページからご覧ください。</p>
+      <p class="center" style="color:var(--muted);">ブログは準備中です。preworksの講座内容や修了後の働き方は、下のページからご覧ください。</p>
     <?php endif; ?>
   </div></section>
 
