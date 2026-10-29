@@ -1906,10 +1906,16 @@ a.btn-more{display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
  * 効かないようにしておく。上の .nobr{white-space:nowrap} より後ろに置くこと。 */
 .post-body .nobr,.post-body .post-toc .nobr{white-space:normal;}
 
-/* ブログカードのサムネイル：画像は常にカード横幅いっぱい、縦横比は元画像のまま（切り抜き・引き伸ばしなし）。
- * 高さは画像ごとに変わる（TOPのブログ欄と /blog/ 共通）。固定 aspect-ratio + contain だと
- * 比率が枠と違う画像（4:3 など）の左右に余白が出るため使わない。
+/* ブログカードのサムネイル：横幅はカード100%、画像エリアは全カード共通の3:2。
+ * 元画像の縦横比は維持したまま object-fit:cover で上下左右を中央基準にトリミングする（引き伸ばし・左右の余白なし）。
+ * pw_blog_thumb() が配信画像の比率をインライン aspect-ratio で出力するため、それを打ち消すために aspect-ratio だけ !important。
+ * （インラインは WP の contain-intrinsic-size:3000px 1500px 対策だったが、3:2固定なら高さは幅から決まるので不要）
  * .bloggrid 内に限定しているので、修了生の声・メンター等の .acard/.vph には影響しない。 */
-.bloggrid .acard img{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:fill;}
+.bloggrid .acard img{display:block;width:100%;height:auto;aspect-ratio:3/2 !important;object-fit:cover;object-position:50% 50%;contain-intrinsic-size:none;}
 .bloggrid .acard:hover img{transform:none;}
 .bloggrid .acard .readmore{margin-top:auto;padding-top:10px;}
+
+/* /blog/：見出し（新着ブログ）を無くしたので、ヒーロー直下のタブまでの余白を詰める */
+.blog-index{padding-top:56px;}
+.blog-index .bloggrid{margin-top:0;}
+@media(max-width:768px){.blog-index{padding-top:36px;}}
