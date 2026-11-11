@@ -23,7 +23,6 @@ $support_plans = implode( '・', array_map( function( $pl ) { return (int) $pl['
 <p>preworksの受講料は、メンターが伴走する期間に合わせて<?php echo esc_html( implode( '・', array_map( function( $pl ) { return (int) $pl['months'] . 'ヶ月'; }, $plans ) ) ); ?>の<?php echo count( $plans ); ?>プランからお選びいただけます。受講料は<?php echo pw_yen( $min ); ?>〜<?php echo pw_yen( $max ); ?>（税込）で、別途、入会金<?php echo pw_yen( $fee ); ?>（税込）が全プラン共通でかかります。クレジットカードなら最大<?php echo (int) $inst; ?>回の分割払いが可能です。</p>
 
 <h2>プランと料金一覧</h2>
-<?php pw_plans( array( 'note' => false ) ); ?>
 <?php
 $rows = array();
 foreach ( $plans as $pl ) {
@@ -45,14 +44,16 @@ pw_table(
 
 <h2>プラン別のサポート内容</h2>
 <?php pw_plan_table(); ?>
+<?php pw_note( '※受講料とは別に、入会金 ' . pw_yen( $fee ) . '（税込）が全プラン一律でかかります。' ); ?>
 <?php pw_tbc_start( 'plan_common' ); ?>
 <?php pw_note( '※面接シミュレーションとURAKATAプレ稼働（報酬あり）は、全プラン共通でご利用いただけます。' ); ?>
 <?php pw_tbc_end(); ?>
 <p>サポート内容のうち、修了後の仕事につながるものは次の3つです。URAKATAで働くことが前提ではなく、自分で案件を獲得する力を身につけることもpreworksのゴールです。</p>
 <?php pw_box( '', array(
     '<strong>面接シミュレーション</strong>：面接に向けて、受け答えを練習します。',
-    '<strong>URAKATAプレ稼働</strong>：面接に通過すると、受講中から報酬ありで本番の実務経験と実績をつくれます。修了後も、希望すればURAKATAで続けられます。報酬の目安（参考）は' . pw_urakata_rate_text() . 'で、業務内容や経験によって異なります。',
-    '<strong>案件獲得伴走サポート</strong>（' . esc_html( $support_plans ) . 'プラン）：修了後の案件獲得に向けたサポートです。' . $tbc( 'support_detail', '【案件獲得伴走サポートの具体的な内容（回数・期間・対応範囲）を掲載】' ),
+    '<strong>URAKATAプレ稼働</strong>：受講中から報酬を得ながら、実際の業務を通じて経験と実績を積むことができます。修了後も、URAKATAの面接に通過した方は、引き続き実務に携わることができます。報酬の目安（参考）は' . pw_urakata_rate_text() . 'で、業務内容や経験によって異なります。',
+    // 案件獲得伴走サポートの具体内容は /price/ 専用の確定文。共通フラグ confirm.support_detail は変更しない（FAQ・カリキュラム・キャリアは非公開のまま）
+    '<strong>案件獲得伴走サポート</strong>（' . esc_html( $support_plans ) . 'プラン）：修了後の案件獲得に向けて、以下の内容をサポートします。<ul><li>自己分析：スキル・経験の棚卸し、強みや方向性の整理</li><li>応募準備：プロフィール・応募文の改善、不安や疑問の相談</li><li>振り返り：応募結果の分析と改善策の検討</li></ul>',
 ), 'list' ); ?>
 <p>あわせてカリキュラムのSTEP7では、「案件獲得講座（選ばれるための戦略）」や「報連相の深化＋期待値調整の技術」を学びます。修了後は、URAKATAで稼働する、URAKATAと並行して自分で案件を獲得する、URAKATAを使わず自分で獲得する、のどれを選んでもかまいません。働き方と案件の探し方は<?php pw_link( 'career', '修了後の働き方' ); ?>、各STEPの内容は<?php pw_link( 'program', 'カリキュラム' ); ?>をご覧ください。</p>
 
@@ -82,7 +83,7 @@ pw_table(
 <p><strong>含まれるもの</strong>：STEP1〜7の動画講座と実践課題（STEP7の案件獲得講座を含む）、課題へのフィードバック、メンター面談とチャット相談、面接シミュレーション、URAKATA案件への挑戦機会、案件獲得伴走サポート（<?php echo esc_html( $support_plans ); ?>プラン）。</p>
 <p><strong>含まれないもの</strong>：パソコン・インターネット環境、分割払いの手数料。</p>
 <?php pw_tbc_start( 'paid_tools' ); ?>
-<p>有料ツールの利用料も受講料には含まれません（講座では無料で使える範囲で学びます）。</p>
+<?php pw_note( '※講座で使用するツールは、すべて無料で利用できる範囲で学習できます。学習のために有料プランをご契約いただく必要はありません。' ); ?>
 <?php pw_tbc_end(); ?>
 
 <h2>お支払い方法</h2>
@@ -112,19 +113,19 @@ pw_table(
 ) ); ?>
 <?php pw_tbc_start( 'plan_change' ); ?>
 <?php pw_faq( array(
-    array( 'q' => '途中でプランを変更できますか？', 'a' => '【ここに掲載：受講中のアップグレード可否と差額の扱い】' ),
+    array( 'q' => '途中でプランを変更できますか？', 'a' => 'はい、受講途中でのプラン変更も可能です。<br>受講期間は1ヶ月単位で延長でき、延長料金は1ヶ月あたり77,000円（税込）です。お支払い方法は、クレジットカード決済または銀行振込からお選びいただけます。' ),
 ), '' ); ?>
 <?php pw_tbc_end(); ?>
-<?php pw_tbc_start( 'refund' ); ?>
+<?php /* 解約・返金：掲載原稿は実装済みだが、/price/ 専用の公開フラグ price_refund が false のあいだは非公開（共通の refund は FAQ・カリキュラムで使用中のため触らない） */ ?>
+<?php pw_tbc_start( 'price_refund' ); ?>
 <?php pw_faq( array(
-    array( 'q' => '解約・返金はできますか？', 'a' => '【ここに掲載：特定商取引法に基づく表記（/legal/）と利用規約の内容に合わせた解約・返金の規定。クーリングオフ対象の有無も記載】' ),
+    array( 'q' => '解約・返金はできますか？', 'a' => '可能です。退会（解約）の場合は、その時点でメンターサポートが終了となります。学習プログラムは引き続き視聴可能ですが、返金は行いません。' ),
 ), '' ); ?>
 <?php pw_tbc_end(); ?>
-<?php pw_tbc_start( 'kyufukin' ); ?>
+<?php /* 教育訓練給付金：確認済みの確定文。/price/ のみ公開（共通 confirm.kyufukin は変更しない＝FAQページは非公開のまま） */ ?>
 <?php pw_faq( array(
-    array( 'q' => '教育訓練給付金の対象ですか？', 'a' => '現在、preworksは教育訓練給付制度の対象講座ではありません。' ),
+    array( 'q' => '教育訓練給付金の対象ですか？', 'a' => 'preworksは教育訓練給付制度の対象講座ではありません。' ),
 ), '' ); ?>
-<?php pw_tbc_end(); ?>
 
 <?php pw_related( array( 'program', 'career', 'consultation', 'faq' ) ); ?>
 

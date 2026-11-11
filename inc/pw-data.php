@@ -111,10 +111,11 @@ function pw_data() {
         'confirm' => array(
             /* --- 料金・規約 --- */
             'refund'            => array( 'ok' => false, 'label' => '返金・クーリングオフ・受講期間延長の規定（利用規約 第7条「サポート期間6ヶ月」と現行プランの食い違いも確認）' ),
-            'plan_common'       => array( 'ok' => false, 'label' => '面接シミュレーション・URAKATAプレ稼働が全プラン共通か' ),
+            'plan_common'       => array( 'ok' => true,  'label' => '面接シミュレーション・URAKATAプレ稼働が全プラン共通か' ),
+            'price_refund'      => array( 'ok' => false, 'label' => '/price/ 専用：FAQ「解約・返金はできますか？」の掲載可否（利用規約 第7条・第13条／特商法ページとの整合確認後に true。共通の refund とは別管理）' ),
             'plan_change'       => array( 'ok' => false, 'label' => '受講中のプラン変更（アップグレード）の可否と差額の扱い' ),
-            'bank_fee'          => array( 'ok' => false, 'label' => '銀行振込手数料の負担者' ),
-            'paid_tools'        => array( 'ok' => false, 'label' => '受講に有料ツールが不要か（無料で使える範囲で学ぶ前提でよいか）' ),
+            'bank_fee'          => array( 'ok' => true,  'label' => '銀行振込手数料の負担者' ),
+            'paid_tools'        => array( 'ok' => true,  'label' => '受講に有料ツールが不要か（無料で使える範囲で学ぶ前提でよいか）' ),
             'kyufukin'          => array( 'ok' => false, 'label' => '教育訓練給付制度など公的給付の対象可否（対象外なら「対象講座ではありません」と明記）' ),
             /* --- 学習・カリキュラム --- */
             'study_time'        => array( 'ok' => false, 'label' => '学習時間の目安（FAQ「週2.5〜6時間」とTOP「2ヶ月プランで1日2時間×週5日×7週間」の統一）' ),
