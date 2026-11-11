@@ -319,3 +319,21 @@ a.pw-related-item.pw-unpub{border-style:dashed;border-color:#d63638;text-decorat
   .pw-seminar-cards{grid-template-columns:1fr;}
   .pw-seminar-card-body{padding:16px 18px 18px;}
 }
+
+/* ---------- /price/ 限定の表示調整（.pw-price は seo-pages/price.php のラッパー） ---------- */
+.pw-price > p:first-child{margin-top:0;}  /* ラッパー化で .pw-article > p:first-child が効かなくなる分 */
+/* サポート箇条書き：.pw-article ul:not([class])（0,2,1）が .box-list ul{padding:0}（0,1,1）に勝って字下げが二重になっていたため、同等以上の詳細度で打ち消す */
+.pw-price .box-list ul:not([class]){margin:0;padding-left:0;}
+.pw-price .box-list li > ul:not([class]){margin:.35em 0 .2em;}
+.pw-price .box-list ul:not([class]) li{font-size:clamp(15px,1.8vw,16px);}
+/* サポート比較表下の2つの注記を詰める（独立した2つの注記のまま） */
+.pw-price .pw-notes{margin:12px 0 26px;}
+.pw-price .pw-notes .pw-note{margin:0 0 2px!important;}
+.pw-price .pw-notes .pw-tbc{margin:0;}
+/* FAQ：pw_faq() の複数呼び出しで増えるブロック間余白（各32px）を消し、質問どうしの間隔を details の14pxに揃える */
+.pw-price .pw-price-faq{margin:0 0 18px;}
+.pw-price .pw-price-faq .pw-faq.faq{margin:0;}
+.pw-price .pw-price-faq .pw-tbc{margin:20px 0 6px;}
+/* 比較表のスワイプ案内（SPのみ） */
+.pw-price .pw-plantable-hint{display:none;margin:-14px 0 20px;text-align:center;color:var(--terra);font-weight:600;font-size:14px;line-height:1.6;}
+@media(max-width:768px){.pw-price .pw-plantable-hint{display:block;}}
