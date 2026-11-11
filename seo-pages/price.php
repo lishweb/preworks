@@ -19,6 +19,7 @@ $tbc    = function( $key, $html ) { ob_start(); pw_tbc_start( $key ); echo $html
 /** 案件獲得伴走サポートがあるプラン（例：3ヶ月・6ヶ月・12ヶ月） */
 $support_plans = implode( '・', array_map( function( $pl ) { return (int) $pl['months'] . 'ヶ月'; }, array_filter( $plans, function( $pl ) { return $pl['support']; } ) ) );
 ?>
+<div class="pw-price">
 
 <p>preworksの受講料は、メンターが伴走する期間に合わせて<?php echo esc_html( implode( '・', array_map( function( $pl ) { return (int) $pl['months'] . 'ヶ月'; }, $plans ) ) ); ?>の<?php echo count( $plans ); ?>プランからお選びいただけます。受講料は<?php echo pw_yen( $min ); ?>〜<?php echo pw_yen( $max ); ?>（税込）で、別途、入会金<?php echo pw_yen( $fee ); ?>（税込）が全プラン共通でかかります。クレジットカードなら最大<?php echo (int) $inst; ?>回の分割払いが可能です。</p>
 
@@ -44,10 +45,13 @@ pw_table(
 
 <h2>プラン別のサポート内容</h2>
 <?php pw_plan_table(); ?>
+<p class="pw-plantable-hint">左右にスワイプして他のプランを見る</p>
+<div class="pw-notes">
 <?php pw_note( '※受講料とは別に、入会金 ' . pw_yen( $fee ) . '（税込）が全プラン一律でかかります。' ); ?>
 <?php pw_tbc_start( 'plan_common' ); ?>
 <?php pw_note( '※面接シミュレーションとURAKATAプレ稼働（報酬あり）は、全プラン共通でご利用いただけます。' ); ?>
 <?php pw_tbc_end(); ?>
+</div>
 <p>サポート内容のうち、修了後の仕事につながるものは次の3つです。URAKATAで働くことが前提ではなく、自分で案件を獲得する力を身につけることもpreworksのゴールです。</p>
 <?php pw_box( '', array(
     '<strong>面接シミュレーション</strong>：面接に向けて、受け答えを練習します。',
@@ -107,6 +111,7 @@ pw_table(
 ), 2 ); ?>
 <p>他の講座と比べて検討したい方や、オンライン秘書の仕事・収入について一般的な情報を知りたい方は、<?php pw_link( 'guide', 'オンライン秘書ガイド' ); ?>もあわせてご覧ください。</p>
 
+<div class="pw-price-faq">
 <?php pw_faq( array(
     array( 'q' => '入会金はどのプランでもかかりますか？', 'a' => 'はい。入会金' . pw_yen( $fee ) . '（税込）が全プラン一律でかかります。' ),
     array( 'q' => '分割払いはできますか？', 'a' => 'クレジットカード決済なら最大' . $inst . '回まで分割できます。分割手数料はお客様のご負担です。銀行振込は一括払いのみです。' ),
@@ -126,6 +131,9 @@ pw_table(
 <?php pw_faq( array(
     array( 'q' => '教育訓練給付金の対象ですか？', 'a' => 'preworksは教育訓練給付制度の対象講座ではありません。' ),
 ), '' ); ?>
+</div>
+
+</div>
 
 <?php pw_related( array( 'program', 'career', 'consultation', 'faq' ) ); ?>
 
