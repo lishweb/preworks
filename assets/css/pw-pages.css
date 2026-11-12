@@ -337,3 +337,10 @@ a.pw-related-item.pw-unpub{border-style:dashed;border-color:#d63638;text-decorat
 /* 比較表のスワイプ案内（SPのみ） */
 .pw-price .pw-plantable-hint{display:none;margin:-14px 0 20px;text-align:center;color:var(--terra);font-weight:600;font-size:14px;line-height:1.6;}
 @media(max-width:768px){.pw-price .pw-plantable-hint{display:block;}}
+
+/* ---------- /faq/ 限定：質問カード間隔の統一（.pw-faq-page は seo-pages/faq.php のラッパー） ----------
+   カテゴリ内で pw_faq() が複数回に分かれる箇所の下余白32pxを打ち消し、_shared.css の details 下余白14pxに揃える。
+   カテゴリ見出し前の余白は従来どおり保つ。共通の .faq / .pw-faq は変更しない。 */
+.pw-faq-page .pw-faq.faq{margin:0;}
+.pw-faq-page h2{margin-top:48px;}
+.pw-faq-page{padding-bottom:18px;}  /* CTA手前の余白は従来（32px）どおり。details下余白14px＋18px */
