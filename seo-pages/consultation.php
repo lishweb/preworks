@@ -11,7 +11,6 @@ pw_page_start();
 
 /** 要確認ブロックを文字列で返す（ステップ説明・FAQの回答の中で使う） */
 $tbc = function( $key, $html ) { ob_start(); pw_tbc_start( $key ); echo $html; pw_tbc_end(); return ob_get_clean(); };
-$minutes = pw( 'consult.minutes' );
 ?>
 
 <p>preworksの無料オンライン相談では、未経験からオンライン秘書を始めた方の事例をもとに、今のあなたが何から始めればよいのかを一緒に整理します。受講を決めていない段階や、在宅ワークに興味を持ち始めたばかりの方も、お気軽にご相談ください。</p>
@@ -31,7 +30,8 @@ $minutes = pw( 'consult.minutes' );
     array( 't' => 'LINE登録（目安：1分）', 'd' => '<p>公式LINEに友だち追加</p>' ),
     array( 't' => '日程の予約（目安：3分）', 'd' => '<p>LINEのメニューから希望の日時を選択</p>' ),
     array( 't' => 'オンライン相談', 'd' => '<p>オンラインでお話しします。</p>'
-        . $tbc( 'consult_time', '<p>Zoom（またはGoogle Meet）でお話しします。所要時間の目安：' . ( $minutes ? esc_html( pw_v( 'consult.minutes' ) ) . '分程度' : '【ここに掲載：所要時間（例：45〜60分）】' ) . '</p>' )
+        // 相談時間・実施ツールは確定内容を一般表示。共通フラグ confirm.consult_time は変更しない
+        . '<p>無料相談は約60分で、オンライン会議ツール「Zoom」を使用して実施します。</p>'
         . $tbc( 'consult_style', '<p>カメラオフでも参加OKです。</p>' ) ),
     array( 't' => 'ご検討', 'd' => '<p>その場で決める必要はありません。持ち帰ってご家族と相談してください。</p>' ),
 ) ); ?>
