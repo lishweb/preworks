@@ -108,12 +108,8 @@ $company = pw( 'company' );
     array( 'q' => '受講すれば、必ずURAKATAで働けますか？', 'a' => 'URAKATAで稼働するには面接があるため、必ず働けるわけではありません。preworksでは面接シミュレーションを1回行い、面接に向けて準備できます。面接に通過すれば、受講中から報酬を得ながら稼働できます。' ),
     array( 'q' => 'URAKATAを使わずに、最初から自分で案件を探したいです。', 'a' => 'もちろん可能です。STEP1の「フリーランスの働き方」「じぶんを守る法務基礎」、STEP7の「案件獲得講座」「エキスパート講座＋面接対策」などで準備でき、' . (int) $support_from . 'ヶ月以上のプランには案件獲得伴走サポートが含まれます。ただし、受講すれば案件の獲得が約束されるわけではありません。' ),
     array( 'q' => 'URAKATAでの業務を、他の案件に応募するときの実績にしてもいいですか？', 'a' => 'はい、担当した業務の種類や期間は実績として伝えて構いません。クライアント名や業務で知った情報など、守秘義務に関わる内容は伏せて伝えてください。' ),
+    array( 'q' => '講座を受けずに、URAKATAで働くことはできますか？', 'a' => '可能です。採用サイトからご応募ください。URAKATA採用サイトは<a href="https://lishinc.notion.site/URAKATA-335d57d065d7808f9d97d806b18fce7a" target="_blank" rel="noopener">こちら</a>' ),
 ) ); ?>
-<?php pw_tbc_start( 'urakata_recruit' ); ?>
-<?php pw_faq( array(
-    array( 'q' => '講座を受けずに、URAKATAで働くことはできますか？', 'a' => '【URAKATAの一般募集の有無と応募条件を記載】' ),
-), '' ); ?>
-<?php pw_tbc_end(); ?>
 
 <?php pw_related( array( 'program', 'price', 'voice', 'mentor', 'consultation' ) ); ?>
 
