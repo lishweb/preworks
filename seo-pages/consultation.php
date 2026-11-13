@@ -51,16 +51,10 @@ pw_table( array( '特典', '内容' ), $rows, array( 'first_col_th' => true ) );
 
 <?php pw_faq( array(
     array( 'q' => '相談したら必ず申し込まないといけませんか？', 'a' => 'いいえ。相談だけでも大丈夫です。お話を伺ったうえで、preworksが合わないと判断した場合は正直にお伝えします。' ),
-), '無料相談のよくある質問' ); ?>
-<?php pw_tbc_start( 'consult_style' ); ?>
-<?php pw_faq( array(
     array( 'q' => '子どもが近くにいても参加できますか？', 'a' => 'はい。お子さんの声が入っても問題ありません。' ),
-), '' ); ?>
-<?php pw_tbc_end(); ?>
-<?php pw_faq( array(
     array( 'q' => 'パソコンがなくても相談できますか？', 'a' => 'はい。スマートフォンからでもご参加いただけます。' ),
     array( 'q' => '相談の日程を変更したいです。', 'a' => 'LINEのメッセージからご連絡ください。' ),
-), '' ); ?>
+), '無料相談のよくある質問' ); ?>
 
 <p style="text-align:center;margin:36px 0 40px;"><?php echo pw_line_btn( 'LINEで無料相談を予約する', 'bottom' ); ?></p>
 
