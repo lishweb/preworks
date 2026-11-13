@@ -8,10 +8,6 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 pw_page_start();
-
-/** 要確認ブロックを文字列で返す（ステップ説明・FAQの回答の中で使う） */
-$tbc = function( $key, $html ) { ob_start(); pw_tbc_start( $key ); echo $html; pw_tbc_end(); return ob_get_clean(); };
-$minutes = pw( 'consult.minutes' );
 ?>
 
 <p>preworksの無料オンライン相談では、未経験からオンライン秘書を始めた方の事例をもとに、今のあなたが何から始めればよいのかを一緒に整理します。受講を決めていない段階や、在宅ワークに興味を持ち始めたばかりの方も、お気軽にご相談ください。</p>
@@ -30,16 +26,13 @@ $minutes = pw( 'consult.minutes' );
 <?php pw_steps( array(
     array( 't' => 'LINE登録（目安：1分）', 'd' => '<p>公式LINEに友だち追加</p>' ),
     array( 't' => '日程の予約（目安：3分）', 'd' => '<p>LINEのメニューから希望の日時を選択</p>' ),
-    array( 't' => 'オンライン相談', 'd' => '<p>オンラインでお話しします。</p>'
-        . $tbc( 'consult_time', '<p>Zoom（またはGoogle Meet）でお話しします。所要時間の目安：' . ( $minutes ? esc_html( pw_v( 'consult.minutes' ) ) . '分程度' : '【ここに掲載：所要時間（例：45〜60分）】' ) . '</p>' )
-        . $tbc( 'consult_style', '<p>カメラオフでも参加OKです。</p>' ) ),
+    // STEP3の説明は確定内容を一般表示。共通フラグ confirm.consult_time / confirm.consult_style は変更しない
+    array( 't' => 'オンライン相談', 'd' => '<p>無料相談は、オンライン会議ツール「Zoom」で約60分行います。今抱えているお悩みや、オンライン秘書の仕事で気になっていること、何から始めたらいいかななど、現役のオンライン秘書に直接ご相談いただけます。</p>'
+        . '<p>ご相談の際は、原則としてカメラをオンにしてお話しいただくようお願いいたします。お子さまと一緒にご参加いただけますので、どうぞお気軽にご参加ください。</p>' ),
     array( 't' => 'ご検討', 'd' => '<p>その場で決める必要はありません。持ち帰ってご家族と相談してください。</p>' ),
 ) ); ?>
-<?php pw_tbc_start( 'consult_style' ); ?>
-<p>相談の担当：【ここに掲載：担当者（現役オンライン秘書のメンター／スタッフなど）】</p>
-<?php pw_tbc_end(); ?>
 
-<?php pw_tbc_start( 'gift_delivery' ); ?>
+<?php // 特典セクションは確定内容を一般表示。共通フラグ confirm.gift_delivery は変更しない ?>
 <h2>無料相談に参加した方への特典</h2>
 <p>無料相談に参加した方限定で、「在宅ワークに役立つ3大特典」をプレゼントしています。</p>
 <?php
@@ -47,7 +40,6 @@ $rows = array();
 foreach ( pw( 'gifts' ) as $i => $g ) $rows[] = array( sprintf( '特典%02d', $i + 1 ), esc_html( $g ) );
 pw_table( array( '特典', '内容' ), $rows, array( 'first_col_th' => true ) );
 ?>
-<?php pw_tbc_end(); ?>
 
 <h2>こんな方におすすめです</h2>
 <?php pw_box( '', array(
@@ -58,24 +50,13 @@ pw_table( array( '特典', '内容' ), $rows, array( 'first_col_th' => true ) );
 ), 'list' ); ?>
 
 <?php pw_faq( array(
-    array( 'q' => '相談したら必ず申し込まないといけませんか？', 'a' => 'いいえ。相談だけでも大丈夫です。' . $tbc( 'consult_honest', 'お話を伺ったうえで、preworksが合わないと判断した場合は正直にお伝えします。' ) ),
-), '無料相談のよくある質問' ); ?>
-<?php pw_tbc_start( 'consult_style' ); ?>
-<?php pw_faq( array(
-    array( 'q' => '子どもが近くにいても参加できますか？', 'a' => 'はい。お子さんの声が入っても問題ありません。カメラオフでの参加も可能です。' ),
-), '' ); ?>
-<?php pw_tbc_end(); ?>
-<?php pw_faq( array(
+    array( 'q' => '相談したら必ず申し込まないといけませんか？', 'a' => 'いいえ。相談だけでも大丈夫です。お話を伺ったうえで、preworksが合わないと判断した場合は正直にお伝えします。' ),
+    array( 'q' => '子どもが近くにいても参加できますか？', 'a' => 'はい。お子さんの声が入っても問題ありません。' ),
     array( 'q' => 'パソコンがなくても相談できますか？', 'a' => 'はい。スマートフォンからでもご参加いただけます。' ),
     array( 'q' => '相談の日程を変更したいです。', 'a' => 'LINEのメッセージからご連絡ください。' ),
-), '' ); ?>
+), '無料相談のよくある質問' ); ?>
 
 <p style="text-align:center;margin:36px 0 40px;"><?php echo pw_line_btn( 'LINEで無料相談を予約する', 'bottom' ); ?></p>
-
-<?php pw_tbc_start( 'contact_consult' ); ?>
-<h2>LINEを使わずに相談したい方へ</h2>
-<p>LINEをお使いでない方は、<?php pw_link( 'contact', 'お問い合わせフォーム' ); ?>から「無料相談希望」とご連絡ください。</p>
-<?php pw_tbc_end(); ?>
 
 <?php pw_related( array( 'program', 'price', 'career', 'voice', 'faq' ) ); ?>
 
